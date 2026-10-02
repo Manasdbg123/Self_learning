@@ -6,11 +6,12 @@ export function generateStaticParams() {
   return subjects.map((s) => ({ subjectId: s.id }));
 }
 
-export default function SubjectPage({ params }: { params: { subjectId: string } }) {
-  const subject = subjects.find((s) => s.id === params.subjectId);
+export default async function SubjectPage({ params }: { params: Promise<{ subjectId: string }> }) {
+  const { subjectId } = await params;
+  const subject = subjects.find((s) => s.id === subjectId);
   if (!subject) notFound();
 
-  const topics = getTopicsBySubject(params.subjectId);
+  const topics = getTopicsBySubject(subjectId);
 
   const difficultyColor = {
     Beginner: 'badge-beginner',

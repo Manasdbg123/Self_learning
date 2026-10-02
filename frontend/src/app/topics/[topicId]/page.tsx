@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, use } from 'react';
 import Link from 'next/link';
 import { topicsDb, Topic } from '@/lib/knowledge';
 
@@ -26,9 +26,10 @@ function MarkdownContent({ content }: { content: string }) {
   return <div className="prose-content" dangerouslySetInnerHTML={{ __html: formatted }} />;
 }
 
-export default function TopicPage({ params }: { params: { topicId: string } }) {
+export default function TopicPage({ params }: { params: Promise<{ topicId: string }> }) {
+  const { topicId } = use(params);
   const [activeTab, setActiveTab] = useState('Overview');
-  const topic: Topic | undefined = topicsDb[params.topicId];
+  const topic: Topic | undefined = topicsDb[topicId];
 
   if (!topic) {
     return (
