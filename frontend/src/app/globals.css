@@ -1,13 +1,164 @@
 @import "tailwindcss";
 
 @theme {
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: ui-monospace, 'Fira Code', monospace;
   --color-background: #09090b;
-  --color-foreground: #fafafa;
 }
 
-@layer base {
-  body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-  }
+* {
+  box-sizing: border-box;
 }
+
+body {
+  background-color: #09090b;
+  color: #fafafa;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+/* Code block styling */
+pre {
+  background: #18181b;
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  background: #27272a;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+pre code {
+  background: transparent;
+  padding: 0;
+}
+
+/* Prose styling for content */
+.prose-content h2 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #e4e4e7;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #27272a;
+}
+
+.prose-content h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #d4d4d8;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose-content p {
+  color: #a1a1aa;
+  line-height: 1.75;
+  margin-bottom: 1rem;
+}
+
+.prose-content ul {
+  list-style: disc;
+  padding-left: 1.5rem;
+  color: #a1a1aa;
+  space-y: 0.5rem;
+}
+
+.prose-content li {
+  line-height: 1.7;
+  margin-bottom: 0.25rem;
+}
+
+.prose-content strong {
+  color: #e4e4e7;
+  font-weight: 600;
+}
+
+/* Tab button styling */
+.tab-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.15s;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+}
+
+.tab-btn.active {
+  background: #3f3f46;
+  color: #e4e4e7;
+}
+
+.tab-btn:not(.active) {
+  color: #71717a;
+}
+
+.tab-btn:not(.active):hover {
+  color: #a1a1aa;
+  background: #27272a;
+}
+
+/* Card styling */
+.card {
+  background: #18181b;
+  border: 1px solid #27272a;
+  border-radius: 12px;
+  transition: border-color 0.15s;
+}
+
+.card:hover {
+  border-color: #3f3f46;
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #a78bfa, #60a5fa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Progress bar */
+.progress-bar {
+  height: 4px;
+  background: #27272a;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.badge-beginner { background: #052e16; color: #4ade80; }
+.badge-intermediate { background: #1e3a5f; color: #60a5fa; }
+.badge-advanced { background: #3b1f6e; color: #c084fc; }
+.badge-expert { background: #450a0a; color: #f87171; }

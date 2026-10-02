@@ -1,34 +1,31 @@
-import React from 'react';
 import Link from 'next/link';
+import { subjects } from '@/lib/knowledge';
 
-export default function SubjectsPage() {
-  const subjects = [
-    { name: 'System Design', topics: ['URL Shortener', 'Parking Lot', 'Rate Limiter'] },
-    { name: 'Programming', topics: ['Java', 'JVM Architecture', 'Garbage Collection'] },
-    { name: 'Backend Engineering', topics: ['Spring Boot', 'Kafka', 'Redis'] }
-  ];
-
+export default function SubjectsIndexPage() {
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="text-4xl font-bold tracking-tight">Subjects</h1>
-        <p className="text-zinc-400 mt-2">Explore the engineering knowledge base.</p>
-      </header>
+      <div>
+        <div className="flex items-center gap-2 text-zinc-500 text-sm mb-2">
+          <Link href="/" className="hover:text-zinc-300">Home</Link> / <span>Subjects</span>
+        </div>
+        <h1 className="text-4xl font-bold text-zinc-100">All Subjects</h1>
+        <p className="text-zinc-400 mt-2">Choose a subject to start learning</p>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {subjects.map((sub, i) => (
-          <div key={i} className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl hover:border-zinc-700 transition">
-            <h2 className="text-xl font-semibold mb-4 text-zinc-100">{sub.name}</h2>
-            <ul className="space-y-2">
-              {sub.topics.map((topic, j) => (
-                <li key={j}>
-                  <Link href={`/topics/${topic.toLowerCase().replace(/ /g, '-')}`} className="text-indigo-400 hover:text-indigo-300 transition">
-                    {topic}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {subjects.map((subject) => (
+          <Link key={subject.id} href={`/subjects/${subject.id}`} className="card p-6 group hover:border-zinc-600 transition-all flex gap-5">
+            <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${subject.color} flex items-center justify-center text-2xl shrink-0`}>
+              {subject.icon}
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-zinc-100 group-hover:text-white transition">{subject.name}</h2>
+              <p className="text-zinc-500 text-sm mt-1">{subject.description}</p>
+              <div className="text-xs text-zinc-600 mt-3">
+                {subject.categories.length} categories · {subject.categories.reduce((acc, c) => acc + c.topicIds.length, 0)} topics
+              </div>
+            </div>
+          </Link>
         ))}
       </div>
     </div>
