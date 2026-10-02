@@ -15,7 +15,7 @@ export interface Topic {
   why: string;
   how: string;
   internals: string;
-  example: string;
+  example?: string;
   realWorld: string;
   advantages: string[];
   disadvantages: string[];

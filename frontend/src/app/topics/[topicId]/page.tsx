@@ -159,7 +159,7 @@ export default function TopicPage({ params }: { params: { topicId: string } }) {
         {activeTab === 'Code' && (
           <section className="card p-6">
             <h2 className="text-lg font-semibold text-zinc-200 mb-4">Code Examples</h2>
-            <MarkdownContent content={topic.codeExample ? `\`\`\`java\n${topic.codeExample}\n\`\`\`` : topic.example} />
+            <MarkdownContent content={topic.codeExample ? `\`\`\`java\n${topic.codeExample}\n\`\`\`` : (topic.example ?? '*No code example available yet.*')} />
           </section>
         )}
 
