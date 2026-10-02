@@ -10,10 +10,18 @@ services:
     rootDir: backend
     plan: free
     envVars:
-      - key: SPRING_DATASOURCE_URL
+      - key: DB_HOST
         fromDatabase:
           name: knowledge-platform-db
-          property: connectionString
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: knowledge-platform-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: knowledge-platform-db
+          property: database
       - key: SPRING_DATASOURCE_USERNAME
         fromDatabase:
           name: knowledge-platform-db
