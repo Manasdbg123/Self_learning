@@ -1,0 +1,26 @@
+services:
+  # The PostgreSQL Database
+  - type: pgo
+    name: knowledge-platform-db
+    plan: free
+
+  # The Spring Boot Backend
+  - type: web
+    name: knowledge-platform-backend
+    env: docker
+    plan: free
+    repo: https://github.com/Manasdbg123/Self_learning.git
+    branch: main
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        fromDatabase:
+          name: knowledge-platform-db
+          property: connectionString
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: knowledge-platform-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: knowledge-platform-db
+          property: password
