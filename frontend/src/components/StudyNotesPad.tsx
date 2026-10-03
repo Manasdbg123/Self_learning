@@ -2,50 +2,45 @@
 import React, { useState, useEffect } from 'react';
 import { useStudyProgress } from '@/lib/studyStore';
 
-interface StudyNotesPadProps {
-  topicId: string;
-}
-
-export default function StudyNotesPad({ topicId }: StudyNotesPadProps) {
+export default function StudyNotesPad({ topicId }: { topicId: string }) {
   const { getTopicNotes, saveTopicNotes } = useStudyProgress();
   const [notes, setNotes] = useState('');
-  const [savedStatus, setSavedStatus] = useState(false);
+  const [saved, setSaved] = useState(false);
 
-  useEffect(() => {
-    setNotes(getTopicNotes(topicId));
-  }, [topicId]);
+  useEffect(() => { setNotes(getTopicNotes(topicId)); }, [topicId]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setNotes(val);
     saveTopicNotes(topicId, val);
-    setSavedStatus(true);
-    setTimeout(() => setSavedStatus(false), 1500);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1800);
   };
 
   return (
-    <div className="card p-5 border-amber-500/20 bg-gradient-to-b from-amber-950/10 to-zinc-950 space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-base">📝</span>
-          <h4 className="font-bold text-zinc-200 text-sm">Personal Study Notes</h4>
+    <div style={{
+      background: 'var(--bg-surface)', border: '1px solid rgba(245,158,11,0.2)',
+      borderRadius: 14, padding: '18px 20px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 16 }}>📝</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Personal Study Notes</span>
         </div>
-        <div className="text-[11px] text-zinc-500">
-          {savedStatus ? (
-            <span className="text-emerald-400 font-medium">Auto-saved ✓</span>
-          ) : (
-            <span>Saved in browser</span>
-          )}
-        </div>
+        <span style={{ fontSize: 11, color: saved ? '#34d399' : 'var(--text-muted)', fontWeight: saved ? 600 : 400, transition: 'color 0.3s' }}>
+          {saved ? '✓ Auto-saved' : 'Saved in browser'}
+        </span>
       </div>
-
       <textarea
         value={notes}
-        onChange={handleChange}
-        placeholder="Write personal takeaways, edge cases, formulas, or reminders for this topic..."
+        onChange={onChange}
+        className="notes-area"
         rows={4}
-        className="w-full bg-zinc-900/90 border border-zinc-800 rounded-xl p-3 text-xs md:text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-amber-500/50 transition resize-y"
+        placeholder="Write your personal notes, key takeaways, edge cases, or anything you want to remember about this topic..."
       />
+      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+        📌 Notes are saved in your browser — they persist across visits
+      </div>
     </div>
   );
 }

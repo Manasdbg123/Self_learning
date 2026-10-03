@@ -6,77 +6,108 @@ export function generateStaticParams() {
   return subjects.map((s) => ({ subjectId: s.id }));
 }
 
+const DIFF_CLASS: Record<string, string> = {
+  Beginner: 'badge-beginner', Intermediate: 'badge-intermediate',
+  Advanced: 'badge-advanced', Expert: 'badge-expert',
+};
+
 export default async function SubjectPage({ params }: { params: Promise<{ subjectId: string }> }) {
   const { subjectId } = await params;
   const subject = subjects.find((s) => s.id === subjectId);
   if (!subject) notFound();
 
   const topics = getTopicsBySubject(subjectId);
-
-  const difficultyColor = {
-    Beginner: 'badge-beginner',
-    Intermediate: 'badge-intermediate',
-    Advanced: 'badge-advanced',
-    Expert: 'badge-expert',
-  };
+  const totalTopics = subject.categories.reduce((a, c) => a + c.topicIds.length, 0);
 
   return (
-    <div className="space-y-8">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 32, paddingBottom: 60 }}>
+      {/* Breadcrumb */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-muted)' }}>
+        <Link href="/" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Home</Link>
+        <span>/</span>
+        <span style={{ color: 'var(--text-secondary)' }}>{subject.name}</span>
+      </div>
+
       {/* Header */}
-      <div className="flex items-start gap-4">
-        <div className={`w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br ${subject.color} flex items-center justify-center text-2xl md:text-3xl shrink-0`}>
-          {subject.icon}
-        </div>
-        <div>
-          <div className="flex items-center gap-2 text-zinc-500 text-sm mb-1">
-            <Link href="/" className="hover:text-zinc-300">Home</Link>
-            <span>/</span>
-            <span className="text-zinc-300">{subject.name}</span>
+      <div className="topic-hero">
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, flexWrap: 'wrap', position: 'relative', zIndex: 1 }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: 16, flexShrink: 0,
+            background: `linear-gradient(135deg, var(--bg-elevated), var(--bg-muted))`,
+            border: '1px solid var(--border-strong)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28,
+          }}>{subject.icon}</div>
+          <div>
+            <h1 style={{ fontSize: 'clamp(20px,4vw,30px)', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2, marginBottom: 8 }}>
+              {subject.name}
+            </h1>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.65, maxWidth: 520 }}>
+              {subject.description}
+            </p>
+            <div style={{ display: 'flex', gap: 12, marginTop: 14, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                📚 {totalTopics} modules
+              </span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                🎯 Interview-ready content
+              </span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                ✅ Quizzes & flashcards included
+              </span>
+            </div>
           </div>
-          <h1 className="text-2xl md:text-4xl font-bold text-zinc-100">{subject.name}</h1>
-          <p className="text-zinc-400 mt-2">{subject.description}</p>
         </div>
       </div>
 
-      {/* Categories and Topics */}
+      {/* Categories & Topics */}
       {subject.categories.map((cat) => {
-        const catTopics = cat.topicIds.map(id => topics.find(t => t.id === id)).filter(Boolean);
+        const catTopics = cat.topicIds
+          .map(id => topics.find(t => t.id === id))
+          .filter(Boolean) as typeof topics;
+
         return (
-          <div key={cat.id}>
-            <h2 className="text-lg font-semibold text-zinc-200 mb-3">{cat.name}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {catTopics.map((topic) => topic && (
-                <Link key={topic.id} href={`/topics/${topic.id}`} className="card p-5 group hover:border-zinc-600 transition-all flex items-start gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium text-zinc-100 group-hover:text-white transition truncate">{topic.title}</h3>
-                    </div>
-                    <p className="text-zinc-500 text-sm line-clamp-2">{topic.what.slice(0, 100)}...</p>
-                    <div className="flex items-center gap-2 mt-3">
-                      <span className={`badge ${difficultyColor[topic.difficulty]}`}>{topic.difficulty}</span>
-                      <span className="text-zinc-600 text-xs">⏱ {topic.estimatedTime}</span>
-                    </div>
-                  </div>
-                  <div className="text-zinc-600 group-hover:text-zinc-400 transition text-xl shrink-0">→</div>
-                </Link>
-              ))}
-              {catTopics.length === 0 && (
-                <div className="col-span-2 card p-6 text-center text-zinc-600">
-                  More topics coming soon in {cat.name}
-                </div>
-              )}
+          <section key={cat.id}>
+            <div className="section-header">
+              <h2 className="section-title">{cat.name}</h2>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{catTopics.length} topics</span>
             </div>
-          </div>
+
+            {catTopics.length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 12 }}>
+                {catTopics.map((topic) => (
+                  <Link key={topic.id} href={`/topics/${topic.id}`} className="card-hover" style={{ padding: '18px 20px', color: 'inherit' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                      <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.35, flex: 1, paddingRight: 12 }}>
+                        {topic.title}
+                      </h3>
+                    </div>
+                    <p style={{ fontSize: 12.5, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 12,
+                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                    }}>
+                      {topic.what.slice(0, 100)}...
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <span className={`badge ${DIFF_CLASS[topic.difficulty]}`}>{topic.difficulty}</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>⏱ {topic.estimatedTime}</span>
+                      </div>
+                      <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>→</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div style={{
+                textAlign: 'center', padding: '32px 20px',
+                background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 12,
+                color: 'var(--text-muted)', fontSize: 13,
+              }}>
+                📚 More topics coming soon in {cat.name}
+              </div>
+            )}
+          </section>
         );
       })}
-
-      {topics.length === 0 && (
-        <div className="card p-12 text-center">
-          <div className="text-5xl mb-4">{subject.icon}</div>
-          <h3 className="text-xl font-semibold text-zinc-300 mb-2">Content Being Added</h3>
-          <p className="text-zinc-500">We're populating this subject. Check back soon!</p>
-        </div>
-      )}
     </div>
   );
 }

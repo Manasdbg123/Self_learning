@@ -1,60 +1,49 @@
 'use client';
 import React, { useState } from 'react';
 
-interface CodeSnippetViewerProps {
-  code: string;
-  language?: string;
-  title?: string;
-}
-
-export default function CodeSnippetViewer({ code, language = 'java', title }: CodeSnippetViewerProps) {
+export default function CodeSnippetViewer({ code, language = 'java', title }: { code: string; language?: string; title?: string }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback
-    }
+    try { await navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch {}
   };
 
   return (
-    <div className="rounded-xl overflow-hidden border border-zinc-800 bg-[#0d0d10] my-4 shadow-xl">
-      <div className="flex items-center justify-between px-4 py-2.5 bg-zinc-900/80 border-b border-zinc-800/80">
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80 inline-block"></span>
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80 inline-block"></span>
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80 inline-block"></span>
+    <div style={{ borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(99,102,241,0.2)', background: '#090c14' }}>
+      {/* Title bar */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '10px 16px', background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.06)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* macOS dots */}
+          <div style={{ display: 'flex', gap: 5 }}>
+            {['#ff5f57','#febc2e','#28c840'].map(c => (
+              <span key={c} style={{ width: 10, height: 10, borderRadius: '50%', background: c, opacity: 0.8, display: 'inline-block' }} />
+            ))}
           </div>
-          <span className="text-xs font-mono text-zinc-400 font-medium ml-2">
+          <span style={{ fontSize: 12, fontFamily: 'monospace', color: 'var(--text-secondary)', fontWeight: 500 }}>
             {title || language.toUpperCase()}
           </span>
         </div>
-
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-800 hover:bg-zinc-700 text-[11px] text-zinc-300 font-medium transition"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '4px 10px', borderRadius: 7, cursor: 'pointer',
+            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+            fontSize: 11, color: copied ? '#34d399' : 'var(--text-secondary)', fontWeight: 600, transition: 'all 0.15s',
+          }}
+          onMouseEnter={e => { if (!copied) e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+          onMouseLeave={e => { if (!copied) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
         >
-          {copied ? (
-            <>
-              <span className="text-emerald-400">✓</span>
-              <span className="text-emerald-300">Copied!</span>
-            </>
-          ) : (
-            <>
-              <span>📋</span>
-              <span>Copy Code</span>
-            </>
-          )}
+          {copied ? '✓ Copied!' : '📋 Copy'}
         </button>
       </div>
-
-      <div className="p-4 overflow-x-auto text-xs md:text-sm font-mono leading-relaxed text-zinc-300">
-        <pre className="!border-0 !p-0 !bg-transparent !m-0">
-          <code>{code}</code>
+      {/* Code */}
+      <div style={{ overflowX: 'auto', padding: '18px 20px' }}>
+        <pre style={{ margin: 0, border: 'none', background: 'transparent', padding: 0, fontSize: 13, lineHeight: 1.7 }}>
+          <code style={{ color: '#cdd6f4', fontFamily: "'JetBrains Mono', 'Fira Code', monospace", background: 'transparent' }}>{code}</code>
         </pre>
       </div>
     </div>

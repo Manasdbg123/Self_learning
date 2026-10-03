@@ -1,193 +1,173 @@
 'use client';
 import React, { useState } from 'react';
 
-interface Flashcard {
-  question: string;
-  answer: string;
-}
-
-interface FlashcardDeckProps {
-  cards: Flashcard[];
-}
+interface Flashcard { question: string; answer: string; }
+interface FlashcardDeckProps { cards: Flashcard[]; }
 
 export default function FlashcardDeck({ cards }: FlashcardDeckProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [idx, setIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [mastered, setMastered] = useState<Set<number>>(new Set());
-  const [rating, setRating] = useState<Record<number, 'easy' | 'hard' | null>>({});
 
-  if (!cards || cards.length === 0) return null;
+  if (!cards?.length) return null;
 
-  const current = cards[currentIndex];
-  const isMastered = mastered.has(currentIndex);
-  const masteredCount = mastered.size;
+  const card = cards[idx];
+  const isMastered = mastered.has(idx);
 
-  const goNext = () => {
-    setFlipped(false);
-    setTimeout(() => setCurrentIndex((prev) => (prev + 1) % cards.length), 200);
-  };
+  const goTo = (i: number) => { setFlipped(false); setTimeout(() => setIdx(i), 220); };
+  const goNext = () => goTo((idx + 1) % cards.length);
+  const goPrev = () => goTo((idx - 1 + cards.length) % cards.length);
 
-  const goPrev = () => {
-    setFlipped(false);
-    setTimeout(() => setCurrentIndex((prev) => (prev - 1 + cards.length) % cards.length), 200);
-  };
-
-  const toggleMastered = () => {
-    setMastered((prev) => {
-      const s = new Set(prev);
-      s.has(currentIndex) ? s.delete(currentIndex) : s.add(currentIndex);
-      return s;
-    });
-  };
-
-  const handleRating = (r: 'easy' | 'hard') => {
-    setRating(prev => ({ ...prev, [currentIndex]: r }));
-    if (r === 'easy') {
-      setMastered(prev => { const s = new Set(prev); s.add(currentIndex); return s; });
-    }
+  const rate = (easy: boolean) => {
+    if (easy) setMastered(s => { const n = new Set(s); n.add(idx); return n; });
     setTimeout(goNext, 350);
   };
 
   return (
-    <div className="space-y-5">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-semibold">
-            🃏 Active Recall Flashcards
-          </div>
-          <h3 className="text-lg font-bold text-slate-100 mt-2">Spaced Repetition Cards</h3>
-          <p className="text-xs text-slate-500 mt-0.5">Click the card to reveal the answer, then rate yourself</p>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '4px 12px', borderRadius: 99,
+            background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.25)',
+            color: '#c084fc', fontSize: 12, fontWeight: 600, marginBottom: 8,
+          }}>🃏 Active Recall — Spaced Repetition</div>
+          <h3 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>Flashcard Deck</h3>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>Click the card to reveal the answer, then rate yourself</p>
         </div>
-        <div className="text-right">
-          <div className="text-sm font-bold text-slate-300">{currentIndex + 1} <span className="text-slate-600">/</span> {cards.length}</div>
-          <div className="text-xs text-purple-400 font-medium mt-0.5">{masteredCount} mastered</div>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-secondary)' }}>
+            {idx + 1} <span style={{ color: 'var(--text-muted)' }}>/ {cards.length}</span>
+          </div>
+          <div style={{ fontSize: 11, color: '#a855f7', marginTop: 2 }}>{mastered.size} mastered</div>
         </div>
       </div>
 
       {/* Progress dots */}
-      <div className="flex gap-1 flex-wrap">
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
         {cards.map((_, i) => (
           <button
             key={i}
-            onClick={() => { setFlipped(false); setTimeout(() => setCurrentIndex(i), 150); }}
-            className={`h-1.5 rounded-full transition-all ${
-              i === currentIndex ? 'w-6 bg-purple-400' :
-              mastered.has(i) ? 'w-3 bg-emerald-500/60' :
-              'w-3 bg-[#1e2438]'
-            }`}
+            onClick={() => goTo(i)}
+            style={{
+              height: 5, borderRadius: 99, border: 'none', cursor: 'pointer', transition: 'all 0.2s',
+              width: i === idx ? 24 : 12,
+              background: i === idx ? '#a855f7' : mastered.has(i) ? '#10b981' : 'var(--bg-muted)',
+            }}
           />
         ))}
       </div>
 
-      {/* 3D Flip Card */}
+      {/* 3D flip card */}
       <div
-        className="flashcard-container w-full"
-        style={{ height: '240px' }}
-        onClick={() => setFlipped(!flipped)}
+        className="flashcard-scene"
+        style={{ height: 230, position: 'relative' }}
+        onClick={() => setFlipped(f => !f)}
       >
-        <div className={`flashcard-inner w-full h-full cursor-pointer ${flipped ? 'flashcard-flipped' : ''}`}
-          style={{ height: '240px' }}
-        >
-          {/* Front — Question */}
-          <div className="flashcard-front w-full h-full p-6 flex flex-col"
-            style={{
-              background: 'linear-gradient(135deg, #1a1f2e 0%, #1e2438 100%)',
-              border: '1px solid rgba(168, 85, 247, 0.25)',
-              borderRadius: '14px',
-            }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-[10px] uppercase tracking-widest font-bold text-purple-400">
-                ❓ Question
-              </span>
-              <span className="text-[10px] text-slate-600 flex items-center gap-1">
-                Tap to reveal <span className="text-purple-400">↩</span>
-              </span>
+        <div className={`flashcard-card ${flipped ? 'is-flipped' : ''}`} style={{ height: 230 }}>
+          {/* Front */}
+          <div className="flashcard-face" style={{
+            background: 'linear-gradient(135deg,var(--bg-surface),var(--bg-elevated))',
+            border: '1px solid rgba(168,85,247,0.3)',
+            justifyContent: 'space-between', padding: '20px 24px',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#a855f7' }}>❓ Question</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Tap to reveal ↩</span>
             </div>
-            <div className="flex-1 flex items-center justify-center">
-              <p className="text-base md:text-lg font-semibold text-slate-100 leading-relaxed text-center px-2">
-                {current.question}
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px' }}>
+              <p style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.55, textAlign: 'center' }}>
+                {card.question}
               </p>
             </div>
-            <div className="text-center text-[10px] text-slate-600 mt-3">
-              Card {currentIndex + 1} of {cards.length}
-            </div>
+            <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)' }}>Card {idx + 1} of {cards.length}</div>
           </div>
 
-          {/* Back — Answer */}
-          <div className="flashcard-back w-full h-full p-6 flex flex-col"
-            style={{
-              background: 'linear-gradient(135deg, #1a2235 0%, #1e2840 100%)',
-              border: '1px solid rgba(99, 102, 241, 0.3)',
-              borderRadius: '14px',
-            }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-[10px] uppercase tracking-widest font-bold text-indigo-400">
-                💡 Answer
-              </span>
-              <span className="text-[10px] text-slate-600 flex items-center gap-1">
-                Tap to flip back <span className="text-indigo-400">↩</span>
-              </span>
+          {/* Back */}
+          <div className="flashcard-face flashcard-back-face" style={{
+            background: 'linear-gradient(135deg,#141a2e,#1a2038)',
+            border: '1px solid rgba(99,102,241,0.35)',
+            justifyContent: 'space-between', padding: '20px 24px',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent-light)' }}>💡 Answer</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Tap to flip back ↩</span>
             </div>
-            <div className="flex-1 overflow-y-auto">
-              <p className="text-sm text-slate-300 leading-relaxed">
-                {current.answer}
-              </p>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+              <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.75 }}>{card.answer}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Rating buttons (shown after flip) */}
+      {/* Rating / Controls */}
       {flipped ? (
-        <div className="grid grid-cols-2 gap-3">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <button
-            onClick={(e) => { e.stopPropagation(); handleRating('hard'); }}
-            className="py-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-400 text-sm font-semibold hover:bg-rose-500/20 transition active:scale-95"
-          >
-            😓 Hard — Review Again
-          </button>
+            onClick={(e) => { e.stopPropagation(); rate(false); }}
+            style={{
+              padding: '11px 16px', borderRadius: 11, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              background: 'rgba(239,68,68,0.08)', border: '1.5px solid rgba(239,68,68,0.3)', color: '#f87171',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.14)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
+          >😓 Hard — Review Again</button>
           <button
-            onClick={(e) => { e.stopPropagation(); handleRating('easy'); }}
-            className="py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/20 transition active:scale-95"
-          >
-            ✅ Got It — Next Card
-          </button>
+            onClick={(e) => { e.stopPropagation(); rate(true); }}
+            style={{
+              padding: '11px 16px', borderRadius: 11, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              background: 'rgba(16,185,129,0.08)', border: '1.5px solid rgba(16,185,129,0.3)', color: '#34d399',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(16,185,129,0.14)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(16,185,129,0.08)')}
+          >✅ Got It — Next Card</button>
         </div>
       ) : (
-        <div className="flex items-center gap-3">
+        <div style={{ display: 'flex', gap: 10 }}>
           <button
             onClick={goPrev}
-            className="px-5 py-2.5 rounded-xl bg-[#1a1f2e] border border-[#242840] text-slate-400 hover:text-white hover:border-[#2d3560] text-xs font-semibold transition"
-          >
-            ← Prev
-          </button>
+            style={{
+              padding: '9px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-secondary)',
+              transition: 'border-color 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--border-strong)')}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+          >← Prev</button>
           <button
-            onClick={toggleMastered}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-semibold border transition ${
-              isMastered
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                : 'bg-[#1a1f2e] border-[#242840] text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            {isMastered ? '⭐ Mastered' : 'Mark as Mastered'}
-          </button>
+            onClick={(e) => { e.stopPropagation(); const n = new Set(mastered); n.has(idx) ? n.delete(idx) : n.add(idx); setMastered(n); }}
+            style={{
+              flex: 1, padding: '9px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              background: isMastered ? 'rgba(16,185,129,0.08)' : 'var(--bg-elevated)',
+              border: `1px solid ${isMastered ? 'rgba(16,185,129,0.3)' : 'var(--border)'}`,
+              color: isMastered ? '#34d399' : 'var(--text-muted)',
+              transition: 'all 0.15s',
+            }}
+          >{isMastered ? '⭐ Mastered' : 'Mark Mastered'}</button>
           <button
             onClick={goNext}
-            className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold transition shadow-lg shadow-purple-600/20"
-          >
-            Next →
-          </button>
+            style={{
+              padding: '9px 18px', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              background: 'linear-gradient(135deg,#7c3aed,#a855f7)', border: 'none', color: '#fff',
+              boxShadow: '0 4px 14px rgba(168,85,247,0.3)', transition: 'opacity 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+          >Next →</button>
         </div>
       )}
 
-      {/* Summary bar */}
-      {masteredCount > 0 && (
-        <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/15 text-emerald-400 text-xs text-center font-medium">
-          🎉 {masteredCount} of {cards.length} cards mastered
-          {masteredCount === cards.length ? ' — Deck complete! Great job!' : ''}
+      {/* Mastery summary */}
+      {mastered.size > 0 && (
+        <div style={{
+          padding: '10px 16px', borderRadius: 10, textAlign: 'center', fontSize: 12, fontWeight: 600,
+          background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', color: '#34d399',
+        }}>
+          🎉 {mastered.size} / {cards.length} mastered{mastered.size === cards.length ? ' — Deck complete!' : ''}
         </div>
       )}
     </div>

@@ -1,207 +1,162 @@
 'use client';
 import React, { useState } from 'react';
 
-interface QuizQuestion {
-  question: string;
-  options: string[];
-  correctIndex: number;
-  explanation: string;
-}
-
-interface InteractiveQuizProps {
-  topicTitle: string;
-  questions: QuizQuestion[];
-}
+interface QuizQuestion { question: string; options: string[]; correctIndex: number; explanation: string; }
+interface InteractiveQuizProps { topicTitle: string; questions: QuizQuestion[]; }
 
 export default function InteractiveQuiz({ topicTitle, questions }: InteractiveQuizProps) {
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
+  const [selected, setSelected] = useState<Record<number, number>>({});
   const [submitted, setSubmitted] = useState<Record<number, boolean>>({});
-  const [showAll, setShowAll] = useState(false);
 
-  if (!questions || questions.length === 0) return null;
+  if (!questions?.length) return null;
 
-  const handleSelect = (qIdx: number, optIdx: number) => {
-    if (submitted[qIdx]) return;
-    setSelectedAnswers((prev) => ({ ...prev, [qIdx]: optIdx }));
-  };
-
-  const handleCheck = (qIdx: number) => {
-    if (selectedAnswers[qIdx] === undefined) return;
-    setSubmitted((prev) => ({ ...prev, [qIdx]: true }));
-  };
-
-  const totalAnswered = Object.keys(submitted).length;
-  const correctCount = Object.entries(submitted).filter(([qIdx, isSub]) =>
-    isSub && selectedAnswers[Number(qIdx)] === questions[Number(qIdx)].correctIndex
+  const totalDone = Object.keys(submitted).length;
+  const correctCount = Object.entries(submitted).filter(([qi, done]) =>
+    done && selected[+qi] === questions[+qi].correctIndex
   ).length;
+  const allDone = totalDone === questions.length;
+  const scorePct = allDone ? Math.round((correctCount / questions.length) * 100) : 0;
 
-  const allDone = totalAnswered === questions.length;
-  const scorePercent = allDone ? Math.round((correctCount / questions.length) * 100) : 0;
-
-  const scoreColor =
-    scorePercent === 100 ? 'text-emerald-400' :
-    scorePercent >= 67  ? 'text-indigo-400' :
-    'text-rose-400';
+  const scoreColor = scorePct === 100 ? '#10b981' : scorePct >= 67 ? '#6366f1' : '#ef4444';
 
   return (
-    <div className="space-y-5">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold">
-            🧠 Knowledge Check
-          </div>
-          <h3 className="text-lg font-bold text-slate-100 mt-2">Quiz: {topicTitle}</h3>
-          <p className="text-xs text-slate-500 mt-0.5">Select an answer, then click "Check" to see if you're right</p>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '4px 12px', borderRadius: 99,
+            background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)',
+            color: 'var(--accent-light)', fontSize: 12, fontWeight: 600, marginBottom: 8,
+          }}>🧠 Knowledge Check</div>
+          <h3 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>Quiz: {topicTitle}</h3>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>Select an option then click "Check Answer"</p>
         </div>
-        {totalAnswered > 0 && (
-          <div className="text-right shrink-0">
-            <div className={`text-2xl font-extrabold ${scoreColor}`}>
-              {correctCount}/{questions.length}
-            </div>
-            <div className="text-[11px] text-slate-500 mt-0.5">
-              {allDone
-                ? scorePercent === 100 ? '🎉 Perfect score!' : scorePercent >= 67 ? '👍 Good job!' : '💪 Keep practicing'
-                : `${totalAnswered} answered`}
+        {totalDone > 0 && (
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+            <div style={{ fontSize: 26, fontWeight: 900, color: scoreColor }}>{correctCount}/{questions.length}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              {allDone ? (scorePct === 100 ? '🏆 Perfect!' : scorePct >= 67 ? '👍 Good job!' : '📚 Keep studying') : `${totalDone} answered`}
             </div>
           </div>
         )}
       </div>
 
-      {/* Score bar (shown when answers start coming in) */}
-      {totalAnswered > 0 && (
-        <div className="h-2 bg-[#1e2438] rounded-full overflow-hidden border border-[#242840]">
-          <div
-            className={`h-full rounded-full transition-all duration-500 ${
-              scorePercent === 100 ? 'bg-gradient-to-r from-emerald-500 to-teal-400' :
-              scorePercent >= 67  ? 'bg-gradient-to-r from-indigo-500 to-purple-500' :
-              'bg-gradient-to-r from-rose-500 to-orange-500'
-            }`}
-            style={{ width: `${scorePercent}%` }}
-          />
+      {/* Score progress */}
+      {totalDone > 0 && (
+        <div className="progress-track" style={{ height: 5 }}>
+          <div style={{
+            height: '100%', borderRadius: 99, width: `${scorePct}%`,
+            background: scorePct === 100 ? '#10b981' : scorePct >= 67 ? 'linear-gradient(90deg,#6366f1,#8b5cf6)' : '#ef4444',
+            transition: 'width 0.5s ease',
+          }} />
         </div>
       )}
 
       {/* Questions */}
-      <div className="space-y-5">
-        {questions.map((q, qIdx) => {
-          const isSubmitted = submitted[qIdx];
-          const chosen = selectedAnswers[qIdx];
-          const isCorrect = isSubmitted && chosen === q.correctIndex;
+      {questions.map((q, qi) => {
+        const isSubmitted = !!submitted[qi];
+        const chosen = selected[qi];
+        const isCorrect = isSubmitted && chosen === q.correctIndex;
 
-          return (
-            <div
-              key={qIdx}
-              className={`rounded-2xl border transition-all ${
-                isSubmitted
-                  ? isCorrect
-                    ? 'bg-emerald-500/5 border-emerald-500/20'
-                    : 'bg-rose-500/5 border-rose-500/20'
-                  : 'bg-[#161b27] border-[#1e2438]'
-              }`}
-            >
-              {/* Question header */}
-              <div className="p-5 pb-3">
-                <div className="flex gap-3 items-start">
-                  <span className={`shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${
-                    isSubmitted
-                      ? isCorrect ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
-                      : 'bg-indigo-500/15 text-indigo-400'
-                  }`}>
-                    {isSubmitted ? (isCorrect ? '✓' : '✗') : `Q${qIdx + 1}`}
-                  </span>
-                  <p className="font-semibold text-slate-200 text-sm leading-relaxed">{q.question}</p>
-                </div>
-              </div>
-
-              {/* Options */}
-              <div className="px-5 pb-4 space-y-2 pl-[52px]">
-                {q.options.map((opt, optIdx) => {
-                  let style = 'border-[#242840] bg-[#1a1f2e] text-slate-400 hover:border-indigo-500/40 hover:text-slate-200 cursor-pointer';
-                  let icon = null;
-
-                  if (chosen === optIdx && !isSubmitted) {
-                    style = 'border-indigo-500/50 bg-indigo-500/12 text-indigo-300 cursor-pointer';
-                  }
-                  if (isSubmitted) {
-                    if (optIdx === q.correctIndex) {
-                      style = 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300 cursor-default';
-                      icon = <span className="text-emerald-400 font-bold ml-auto text-sm">✓</span>;
-                    } else if (chosen === optIdx) {
-                      style = 'border-rose-500/40 bg-rose-500/8 text-rose-400 line-through opacity-70 cursor-default';
-                      icon = <span className="text-rose-400 font-bold ml-auto text-sm">✗</span>;
-                    } else {
-                      style = 'border-[#1e2438] bg-[#12151f] text-slate-600 cursor-default opacity-60';
-                    }
-                  }
-
-                  return (
-                    <button
-                      key={optIdx}
-                      disabled={isSubmitted}
-                      onClick={() => handleSelect(qIdx, optIdx)}
-                      className={`w-full text-left p-3 rounded-xl text-xs md:text-sm border transition-all flex items-start gap-2 group ${style}`}
-                    >
-                      <span className={`shrink-0 w-5 h-5 rounded-md border text-[10px] font-bold flex items-center justify-center mt-0.5 ${
-                        chosen === optIdx && !isSubmitted ? 'border-indigo-400 bg-indigo-500/20 text-indigo-400' :
-                        isSubmitted && optIdx === q.correctIndex ? 'border-emerald-400 bg-emerald-500/20 text-emerald-400' :
-                        'border-[#2d3560] text-slate-600'
-                      }`}>
-                        {String.fromCharCode(65 + optIdx)}
-                      </span>
-                      <span className="flex-1 leading-relaxed">{opt}</span>
-                      {icon}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Check / Explanation */}
-              <div className="px-5 pb-5 pl-[52px]">
-                {!isSubmitted ? (
-                  <button
-                    disabled={chosen === undefined}
-                    onClick={() => handleCheck(qIdx)}
-                    className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed text-white text-xs font-semibold transition shadow-md shadow-indigo-600/20"
-                  >
-                    Check Answer →
-                  </button>
-                ) : (
-                  <div className={`p-4 rounded-xl border text-xs leading-relaxed ${
-                    isCorrect
-                      ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-300'
-                      : 'bg-[#1a1f2e] border-[#242840] text-slate-300'
-                  }`}>
-                    <span className="font-bold block mb-1">{isCorrect ? '✅ Correct!' : '💡 Explanation:'}</span>
-                    {q.explanation}
-                  </div>
-                )}
+        return (
+          <div key={qi} style={{
+            borderRadius: 14, overflow: 'hidden',
+            border: `1px solid ${isSubmitted ? (isCorrect ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.25)') : 'var(--border)'}`,
+            background: isSubmitted ? (isCorrect ? 'rgba(16,185,129,0.04)' : 'rgba(239,68,68,0.04)') : 'var(--bg-surface)',
+            transition: 'border-color 0.3s, background 0.3s',
+          }}>
+            {/* Question */}
+            <div style={{ padding: '18px 20px 14px' }}>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                <span style={{
+                  flexShrink: 0, width: 28, height: 28, borderRadius: 8,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 11, fontWeight: 700,
+                  background: isSubmitted ? (isCorrect ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)') : 'rgba(99,102,241,0.12)',
+                  color: isSubmitted ? (isCorrect ? '#34d399' : '#f87171') : 'var(--accent-light)',
+                }}>
+                  {isSubmitted ? (isCorrect ? '✓' : '✗') : `Q${qi + 1}`}
+                </span>
+                <p style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.55, flex: 1 }}>
+                  {q.question}
+                </p>
               </div>
             </div>
-          );
-        })}
-      </div>
 
-      {/* All done banner */}
+            {/* Options */}
+            <div style={{ padding: '0 20px 16px 56px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {q.options.map((opt, oi) => {
+                let cls = 'quiz-option';
+                if (!isSubmitted && chosen === oi) cls += ' selected';
+                if (isSubmitted) {
+                  if (oi === q.correctIndex) cls += ' correct';
+                  else if (chosen === oi) cls += ' wrong';
+                  else cls += ' dimmed';
+                }
+                return (
+                  <button
+                    key={oi}
+                    disabled={isSubmitted}
+                    onClick={() => !isSubmitted && setSelected(s => ({ ...s, [qi]: oi }))}
+                    className={cls}
+                  >
+                    <span className="option-letter">{String.fromCharCode(65 + oi)}</span>
+                    <span style={{ flex: 1, textAlign: 'left', lineHeight: 1.5 }}>{opt}</span>
+                    {isSubmitted && oi === q.correctIndex && <span style={{ color: '#34d399', fontWeight: 700 }}>✓</span>}
+                    {isSubmitted && chosen === oi && oi !== q.correctIndex && <span style={{ color: '#f87171', fontWeight: 700 }}>✗</span>}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Check / Explanation */}
+            <div style={{ padding: '0 20px 18px 56px' }}>
+              {!isSubmitted ? (
+                <button
+                  disabled={chosen === undefined}
+                  onClick={() => chosen !== undefined && setSubmitted(s => ({ ...s, [qi]: true }))}
+                  style={{
+                    padding: '8px 20px', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                    background: chosen !== undefined ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'var(--bg-muted)',
+                    border: 'none', color: chosen !== undefined ? '#fff' : 'var(--text-muted)',
+                    boxShadow: chosen !== undefined ? '0 4px 14px rgba(99,102,241,0.3)' : 'none',
+                    transition: 'all 0.15s', opacity: chosen === undefined ? 0.5 : 1,
+                  }}
+                >Check Answer →</button>
+              ) : (
+                <div style={{
+                  padding: '12px 16px', borderRadius: 10, fontSize: 13, lineHeight: 1.7,
+                  background: isCorrect ? 'rgba(16,185,129,0.06)' : 'var(--bg-elevated)',
+                  border: `1px solid ${isCorrect ? 'rgba(16,185,129,0.2)' : 'var(--border)'}`,
+                  color: isCorrect ? '#34d399' : 'var(--text-secondary)',
+                }}>
+                  <strong>{isCorrect ? '✅ Correct! ' : '💡 Explanation: '}</strong>
+                  {q.explanation}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* All done */}
       {allDone && (
-        <div className={`p-5 rounded-2xl border text-center ${
-          scorePercent === 100
-            ? 'bg-emerald-500/8 border-emerald-500/25'
-            : scorePercent >= 67
-              ? 'bg-indigo-500/8 border-indigo-500/25'
-              : 'bg-rose-500/8 border-rose-500/25'
-        }`}>
-          <div className="text-3xl mb-2">
-            {scorePercent === 100 ? '🏆' : scorePercent >= 67 ? '🎯' : '📚'}
+        <div style={{
+          textAlign: 'center', padding: '28px 20px', borderRadius: 16,
+          background: scorePct === 100 ? 'rgba(16,185,129,0.06)' : scorePct >= 67 ? 'rgba(99,102,241,0.06)' : 'rgba(239,68,68,0.06)',
+          border: `1px solid ${scorePct === 100 ? 'rgba(16,185,129,0.25)' : scorePct >= 67 ? 'rgba(99,102,241,0.25)' : 'rgba(239,68,68,0.2)'}`,
+        }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>
+            {scorePct === 100 ? '🏆' : scorePct >= 67 ? '🎯' : '📚'}
           </div>
-          <div className={`text-lg font-extrabold mb-1 ${scoreColor}`}>
-            {scorePercent}% Score
-          </div>
-          <p className="text-xs text-slate-400">
-            {scorePercent === 100
-              ? 'Perfect! You\'ve mastered this topic. Move on to the next one.'
-              : scorePercent >= 67
-                ? 'Good understanding! Review the wrong answers and try again.'
+          <div style={{ fontSize: 32, fontWeight: 900, color: scoreColor, marginBottom: 6 }}>{scorePct}%</div>
+          <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', maxWidth: 360, margin: '0 auto' }}>
+            {scorePct === 100
+              ? "Perfect score! You've mastered this topic. Move to the next one."
+              : scorePct >= 67
+                ? 'Good understanding. Review wrong answers, then try again.'
                 : 'Keep studying — re-read the Deep Dive tab before retrying.'}
           </p>
         </div>
