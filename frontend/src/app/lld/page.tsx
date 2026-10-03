@@ -41,7 +41,7 @@ export default function LLDPage() {
         ))}
 
         {/* Placeholder cards for upcoming content */}
-        {['Elevator System', 'ATM', 'Vending Machine', 'Movie Ticket Booking', 'Food Delivery', 'Car Rental', 'Hotel Booking', 'Chess', 'Snake and Ladder', 'Notification System', 'Logging Framework', 'Library Management', 'Splitwise'].map((name) => (
+        {['ATM System', 'Vending Machine', 'Car Rental (Zoomcar)', 'Hotel Booking', 'Chess Game Engine', 'Notification System', 'Logging Framework', 'Splitwise Expense Sharing'].map((name) => (
           <div key={name} className="card p-6 opacity-50 cursor-not-allowed">
             <div className="flex items-start justify-between">
               <div>

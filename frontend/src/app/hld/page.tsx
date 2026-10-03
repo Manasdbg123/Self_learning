@@ -5,21 +5,19 @@ export default function HLDPage() {
   const hldTopics = Object.values(topicsDb).filter(t => t.category === 'HLD');
 
   const allHLD = [
-    { title: 'URL Shortener', difficulty: 'Intermediate', id: 'hld-url-shortener', available: true },
-    { title: 'YouTube', difficulty: 'Expert', id: 'hld-youtube', available: false },
-    { title: 'Netflix', difficulty: 'Expert', id: 'hld-netflix', available: false },
-    { title: 'WhatsApp', difficulty: 'Expert', id: 'hld-whatsapp', available: false },
-    { title: 'Uber', difficulty: 'Expert', id: 'hld-uber', available: false },
+    { title: 'Netflix (Global Video Streaming)', difficulty: 'Expert', id: 'hld-netflix', available: true },
+    { title: 'Uber / Grab (Geospatial Ride Dispatch)', difficulty: 'Expert', id: 'hld-uber', available: true },
+    { title: 'Food Delivery (DoorDash / Swiggy / Saga)', difficulty: 'Expert', id: 'hld-food-delivery', available: true },
+    { title: 'WhatsApp / Telegram (E2EE Chat)', difficulty: 'Expert', id: 'hld-whatsapp', available: true },
+    { title: 'Twitter / X (Timeline & Fanout Engine)', difficulty: 'Advanced', id: 'hld-twitter', available: true },
+    { title: 'YouTube / TikTok (Video Transcoding & Recs)', difficulty: 'Expert', id: 'hld-youtube', available: true },
+    { title: 'Distributed Web Crawler (Search Engine Scale)', difficulty: 'Expert', id: 'hld-web-crawler', available: true },
+    { title: 'Distributed Rate Limiter (Token / Sliding Window)', difficulty: 'Advanced', id: 'hld-rate-limiter', available: true },
+    { title: 'Distributed URL Shortener (TinyURL)', difficulty: 'Intermediate', id: 'hld-url-shortener', available: true },
     { title: 'Instagram', difficulty: 'Advanced', id: 'hld-instagram', available: false },
-    { title: 'Twitter/X', difficulty: 'Advanced', id: 'hld-twitter', available: false },
-    { title: 'Amazon', difficulty: 'Expert', id: 'hld-amazon', available: false },
-    { title: 'Food Delivery (Swiggy/Zomato)', difficulty: 'Advanced', id: 'hld-food-delivery', available: false },
-    { title: 'Ride Sharing', difficulty: 'Advanced', id: 'hld-ride-sharing', available: false },
-    { title: 'Ticket Booking (BookMyShow)', difficulty: 'Advanced', id: 'hld-ticket-booking', available: false },
+    { title: 'Amazon E-Commerce', difficulty: 'Expert', id: 'hld-amazon', available: false },
     { title: 'Distributed File Storage', difficulty: 'Expert', id: 'hld-distributed-storage', available: false },
     { title: 'Notification System', difficulty: 'Intermediate', id: 'hld-notification', available: false },
-    { title: 'Search Engine', difficulty: 'Expert', id: 'hld-search-engine', available: false },
-    { title: 'Rate Limiter', difficulty: 'Advanced', id: 'hld-rate-limiter', available: false },
   ];
 
   const diffBadge: Record<string, string> = {

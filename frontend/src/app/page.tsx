@@ -2,19 +2,19 @@ import Link from 'next/link';
 import { subjects, getAllTopics } from '@/lib/knowledge';
 
 const stats = [
-  { label: 'Topics', value: '6+', sub: 'and growing' },
-  { label: 'LLD Problems', value: '15', sub: 'fully solved' },
-  { label: 'HLD Systems', value: '15', sub: 'architecture ready' },
-  { label: 'Interview Qs', value: '100+', sub: 'with answers' },
+  { label: 'Engineering Topics', value: '34+', sub: 'comprehensive guides' },
+  { label: 'HLD Systems', value: '9', sub: 'production architectures' },
+  { label: 'LLD Solutions', value: '7', sub: 'fully solved in Java' },
+  { label: 'Interview Qs', value: '120+', sub: 'with expert answers' },
 ];
 
 const quickAccess = [
-  { title: 'URL Shortener', sub: 'HLD · Intermediate', href: '/topics/hld-url-shortener', badge: 'Popular', color: 'from-blue-500/10 to-indigo-500/10 border-blue-500/20' },
-  { title: 'Parking Lot', sub: 'LLD · Intermediate', href: '/topics/lld-parking-lot', badge: 'Interview Fav', color: 'from-purple-500/10 to-violet-500/10 border-purple-500/20' },
-  { title: 'JVM Architecture', sub: 'Java · Advanced', href: '/topics/jvm-architecture', badge: 'Core', color: 'from-amber-500/10 to-orange-500/10 border-amber-500/20' },
-  { title: 'RAG Architecture', sub: 'AI · Advanced', href: '/topics/rag', badge: 'Trending', color: 'from-green-500/10 to-emerald-500/10 border-green-500/20' },
-  { title: 'Apache Kafka', sub: 'Backend · Advanced', href: '/topics/kafka', badge: 'Core', color: 'from-rose-500/10 to-pink-500/10 border-rose-500/20' },
-  { title: 'SOLID Principles', sub: 'OOP · Intermediate', href: '/topics/solid-principles', badge: 'Fundamental', color: 'from-cyan-500/10 to-sky-500/10 border-cyan-500/20' },
+  { title: 'Netflix Streaming', sub: 'HLD · Open Connect & CDN', href: '/topics/hld-netflix', badge: 'Flagship HLD', color: 'from-red-500/10 to-rose-500/10 border-red-500/20' },
+  { title: 'Uber Ride Dispatch', sub: 'HLD · H3 Hexagonal Geo', href: '/topics/hld-uber', badge: 'High Concurrency', color: 'from-blue-500/10 to-indigo-500/10 border-blue-500/20' },
+  { title: 'Movie Ticket Booking', sub: 'LLD · Two-Phase Locking', href: '/topics/lld-bookmyshow', badge: 'Interview Core', color: 'from-purple-500/10 to-violet-500/10 border-purple-500/20' },
+  { title: 'Multi-Elevator Dispatcher', sub: 'LLD · LOOK & State Pattern', href: '/topics/lld-elevator', badge: 'OOP Pattern', color: 'from-amber-500/10 to-orange-500/10 border-amber-500/20' },
+  { title: 'Spring Security & JWT', sub: 'Backend · Filter Pipeline', href: '/topics/spring-security-jwt', badge: 'Framework Deep Dive', color: 'from-green-500/10 to-emerald-500/10 border-green-500/20' },
+  { title: 'Agentic LLM (ReAct)', sub: 'AI · Planner-Executor-Reflector', href: '/topics/agentic-llm', badge: 'Trending AI', color: 'from-cyan-500/10 to-sky-500/10 border-cyan-500/20' },
 ];
 
 export default function Dashboard() {
