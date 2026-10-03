@@ -10,7 +10,7 @@ export default function LLDPage() {
         <div className="flex items-center gap-2 text-zinc-500 text-sm mb-2">
           <Link href="/" className="hover:text-zinc-300">Home</Link> / <span>LLD Problems</span>
         </div>
-        <h1 className="text-4xl font-bold text-zinc-100">Low Level Design</h1>
+        <h1 className="text-2xl md:text-4xl font-bold text-zinc-100">Low Level Design</h1>
         <p className="text-zinc-400 mt-2">Fully solved LLD problems with SOLID analysis, class diagrams, Java implementation, and interview questions</p>
       </div>
 

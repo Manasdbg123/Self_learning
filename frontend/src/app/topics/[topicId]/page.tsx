@@ -57,9 +57,9 @@ export default function TopicPage({ params }: { params: Promise<{ topicId: strin
 
       {/* Header */}
       <div className="pb-6 border-b border-zinc-800">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-zinc-100 tracking-tight mb-3">{topic.title}</h1>
+            <h1 className="text-2xl md:text-4xl font-bold text-zinc-100 tracking-tight mb-3">{topic.title}</h1>
             <div className="flex flex-wrap items-center gap-2">
               <span className={`badge ${difficultyBadge[topic.difficulty]}`}>{topic.difficulty}</span>
               <span className="text-zinc-600 text-xs">⏱ {topic.estimatedTime}</span>

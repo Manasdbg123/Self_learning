@@ -29,14 +29,14 @@ export default function Dashboard() {
           <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
           AI-Powered Learning Platform
         </div>
-        <h1 className="text-5xl font-bold tracking-tight text-zinc-100 leading-tight">
+        <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-zinc-100 leading-tight">
           Your Personal<br />
           <span className="gradient-text">Engineering University</span>
         </h1>
-        <p className="text-zinc-400 text-lg mt-4 max-w-2xl">
+        <p className="text-zinc-400 text-base md:text-lg mt-4 max-w-2xl">
           Master Software Engineering, System Design, Backend, and AI — with structured learning paths, AI tutoring, and real-world examples.
         </p>
-        <div className="flex gap-3 mt-6">
+        <div className="flex flex-wrap gap-3 mt-6">
           <Link href="/subjects/system-design" className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition text-sm">
             Start with System Design →
           </Link>

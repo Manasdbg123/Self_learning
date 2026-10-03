@@ -23,8 +23,8 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-start gap-5">
-        <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${subject.color} flex items-center justify-center text-3xl`}>
+      <div className="flex items-start gap-4">
+        <div className={`w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br ${subject.color} flex items-center justify-center text-2xl md:text-3xl shrink-0`}>
           {subject.icon}
         </div>
         <div>
@@ -33,7 +33,7 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
             <span>/</span>
             <span className="text-zinc-300">{subject.name}</span>
           </div>
-          <h1 className="text-4xl font-bold text-zinc-100">{subject.name}</h1>
+          <h1 className="text-2xl md:text-4xl font-bold text-zinc-100">{subject.name}</h1>
           <p className="text-zinc-400 mt-2">{subject.description}</p>
         </div>
       </div>
