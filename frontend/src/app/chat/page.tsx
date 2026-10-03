@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
+import { getAllTopics, topicsDb, Topic } from '@/lib/knowledge';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -8,92 +9,31 @@ interface Message {
 }
 
 const SUGGESTIONS = [
-  'Explain JVM Architecture',
-  'Explain Kafka with a real example',
-  'What is the difference between RAG and fine-tuning?',
-  'Design a URL Shortener system',
-  'Quiz me on SOLID principles',
-  'What are the SOLID principles?',
-  'Explain HashMap internals',
-  'Compare Kafka vs RabbitMQ',
+  'Design Netflix streaming architecture',
+  'Design Uber real-time ride dispatch',
+  'Explain BookMyShow concurrency locking',
+  'How does Consistent Hashing work?',
+  'Explain Spring Security JWT filter chain',
+  'How does Redis event loop handle 100k OPS?',
+  'Explain Kafka consumer group rebalancing',
+  'Compare 2PC vs Saga Pattern',
 ];
 
-const DEMO_RESPONSES: Record<string, { content: string; sources: string[] }> = {
-  default: {
-    content: `I'm your AI Engineering Tutor, connected to your entire knowledge base covering Java, System Design, Backend Engineering, AI/ML, and more.
-
-I can help you:
-- **Explain concepts** at any depth level
-- **Quiz you** on any topic
-- **Compare technologies** (e.g., Kafka vs RabbitMQ)
-- **Design systems** (LLD and HLD)
-- **Prepare for interviews** with targeted questions
-
-What would you like to learn today?`,
-    sources: [],
-  },
-  kafka: {
-    content: `## Apache Kafka — Core Explanation
-
-**What is Kafka?**
-Kafka is a distributed event streaming platform originally built at LinkedIn to handle 1+ trillion messages per day. Unlike traditional message queues (RabbitMQ, ActiveMQ) where messages are deleted after consumption, Kafka stores events in a persistent **commit log** — multiple consumers can independently read the same event multiple times.
-
-**Core Concepts:**
-- **Topic**: Named channel where events are written (like a database table for streams)
-- **Partition**: Unit of parallelism within a topic. Events in one partition are totally ordered.
-- **Producer**: Writes events to a topic
-- **Consumer Group**: Multiple consumers sharing partitions for parallel processing
-- **Offset**: Integer position of an event within a partition
-
-**Why choose Kafka?**
-1. Decouple services (producer doesn't know consumers)
-2. Buffer traffic spikes
-3. Replay events (new service can replay entire history)
-4. Fan-out: one event → multiple independent consumers
-
-**Real-world**: Netflix uses Kafka for streaming events, Uber for 1+ trillion messages/day.
-
-Want me to explain **producer delivery semantics**, **consumer group rebalancing**, or **Kafka vs RabbitMQ** comparison?`,
-    sources: ['Apache Kafka Documentation', 'Gaurav Sen - Kafka Architecture Video', 'Confluent: Kafka: The Definitive Guide'],
-  },
-  rag: {
-    content: `## RAG vs Fine-Tuning — Detailed Comparison
-
-Both techniques improve LLM performance for specific domains, but they work fundamentally differently:
-
-**Fine-Tuning:**
-- Bakes domain knowledge into model weights
-- Requires retraining when knowledge changes (expensive: $$$)
-- Cannot cite specific source documents
-- Best for: style adaptation, format learning, behavior modification
-
-**RAG (Retrieval-Augmented Generation):**
-- Retrieves knowledge at inference time from a vector database
-- Instantly updatable — just add new documents
-- Provides source attribution for every claim
-- Best for: factual knowledge, private data, up-to-date information
-
-**Which to use?**
-- Private company data → **RAG** (don't want to include in model weights)
-- Latest news / real-time info → **RAG** (no knowledge cutoff)
-- Style/tone adaptation → **Fine-tuning**
-- Best production systems: **Both** — fine-tuned model + RAG for knowledge
-
-**RAG Pipeline:**
-1. Ingest documents → chunk → embed → store in vector DB
-2. At query time: embed question → retrieve top-k chunks → assemble prompt → generate
-
-This platform uses RAG to ground my answers in your knowledge base.`,
-    sources: ['LangChain RAG Tutorial', 'Pinecone: What is RAG?', 'This platform\'s AI knowledge base'],
-  },
-};
-
 export default function ChatPage() {
+  const allTopics = getAllTopics();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: DEMO_RESPONSES.default.content,
-      sources: [],
+      content: `I'm your AI Engineering Tutor, connected to your entire knowledge base covering Java, Distributed Systems, 15 complete HLD/LLD problems from Gaurav Sen's curriculum, and modern backend architectures.
+
+I can help you:
+- **Deconstruct system architectures** (Netflix, Uber, WhatsApp, YouTube, Food Delivery, BookMyShow)
+- **Deep-dive into low-level code & patterns** (Elevator LOOK strategy, LRU Cache, TinyURL, Pub/Sub)
+- **Explain distributed fundamentals** (Consistent Hashing, 2PC vs Saga, CAP Theorem, Rate Limiting)
+- **Prepare for Staff/Senior interviews** with targeted Q&A and trade-offs
+
+What would you like to explore today?`,
+      sources: ['Comprehensive System Design Engineering Notebook'],
     },
   ]);
   const [input, setInput] = useState('');
@@ -104,6 +44,51 @@ export default function ChatPage() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const findBestTopicMatch = (query: string): Topic | undefined => {
+    const q = query.toLowerCase();
+    
+    // Direct keyword mappings
+    if (q.includes('netflix') || q.includes('streaming')) return topicsDb['hld-netflix'];
+    if (q.includes('uber') || q.includes('ride') || q.includes('h3') || q.includes('geospatial')) return topicsDb['hld-uber'];
+    if (q.includes('food') || q.includes('doordash') || q.includes('swiggy') || q.includes('zomato')) return topicsDb['hld-food-delivery'];
+    if (q.includes('whatsapp') || q.includes('telegram') || q.includes('chat') || q.includes('e2ee') || q.includes('signal')) return topicsDb['hld-whatsapp'];
+    if (q.includes('twitter') || q.includes('fanout') || q.includes('timeline')) return topicsDb['hld-twitter'];
+    if (q.includes('youtube') || q.includes('tiktok') || q.includes('transcoding') || q.includes('video')) return topicsDb['hld-youtube'];
+    if (q.includes('crawler') || q.includes('search engine') || q.includes('simhash')) return topicsDb['hld-web-crawler'];
+    if (q.includes('rate limit') || q.includes('token bucket') || q.includes('sliding window')) return topicsDb['hld-rate-limiter'];
+    if (q.includes('url shortener') || q.includes('tinyurl') || q.includes('base62')) return topicsDb['lld-url-shortener'] || topicsDb['hld-url-shortener'];
+    if (q.includes('lru') || q.includes('cache eviction')) return topicsDb['lld-lru-cache'];
+    if (q.includes('elevator') || q.includes('scan') || q.includes('look algorithm')) return topicsDb['lld-elevator'];
+    if (q.includes('parking') || q.includes('parking lot')) return topicsDb['lld-parking-lot'];
+    if (q.includes('pubsub') || q.includes('pub/sub') || q.includes('observer')) return topicsDb['lld-pubsub'];
+    if (q.includes('snake') || q.includes('ladder')) return topicsDb['lld-snake-ladder'];
+    if (q.includes('bookmyshow') || q.includes('movie') || q.includes('ticket')) return topicsDb['lld-bookmyshow'];
+    if (q.includes('consistent hash') || q.includes('vnode') || q.includes('ring')) return topicsDb['consistent-hashing'];
+    if (q.includes('scaling') || q.includes('scale up') || q.includes('vertical')) return topicsDb['scaling-models'];
+    if (q.includes('websocket') || q.includes('polling') || q.includes('sse') || q.includes('grpc')) return topicsDb['comm-protocols'];
+    if (q.includes('load balanc') || q.includes('l4') || q.includes('l7') || q.includes('nginx')) return topicsDb['load-balancing'];
+    if (q.includes('caching') || q.includes('cache-aside') || q.includes('write-through')) return topicsDb['caching-strategies'];
+    if (q.includes('saga') || q.includes('2pc') || q.includes('two-phase commit') || q.includes('distributed trans')) return topicsDb['distributed-transactions'];
+    if (q.includes('cap') || q.includes('pacelc')) return topicsDb['cap-pacelc'];
+    if (q.includes('jwt') || q.includes('spring security') || q.includes('dispatcherservlet')) return topicsDb['spring-security-jwt'];
+    if (q.includes('postgres') || q.includes('jsonb') || q.includes('mvcc')) return topicsDb['postgres-jsonb-mvcc'];
+    if (q.includes('redis') || q.includes('redlock') || q.includes('event loop')) return topicsDb['redis-concurrency'];
+    if (q.includes('agent') || q.includes('react') || q.includes('reflector') || q.includes('planner')) return topicsDb['agentic-llm'];
+    if (q.includes('anpr') || q.includes('number plate') || q.includes('yolo') || q.includes('vision')) return topicsDb['computer-vision-anpr'];
+    if (q.includes('kafka')) return topicsDb['kafka'];
+    if (q.includes('rag')) return topicsDb['rag'];
+    if (q.includes('jvm') || q.includes('classloader')) return topicsDb['jvm-architecture'];
+    if (q.includes('garbage collection') || q.includes('gc')) return topicsDb['garbage-collection'];
+    if (q.includes('hashmap')) return topicsDb['hashmap'];
+    if (q.includes('solid')) return topicsDb['solid-principles'];
+
+    // Fallback: search topics by title and tags
+    return allTopics.find(t => 
+      t.title.toLowerCase().includes(q) || 
+      t.tags.some(tag => q.includes(tag.toLowerCase()))
+    );
+  };
+
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
     const userMsg: Message = { role: 'user', content: text };
@@ -111,17 +96,47 @@ export default function ChatPage() {
     setInput('');
     setLoading(true);
 
-    await new Promise((r) => setTimeout(r, 1200));
+    await new Promise((r) => setTimeout(r, 800));
 
-    // Smart response matching
-    const lowerText = text.toLowerCase();
-    let response = DEMO_RESPONSES.default;
-    if (lowerText.includes('kafka') || lowerText.includes('rabbitmq')) response = DEMO_RESPONSES.kafka;
-    if (lowerText.includes('rag') || lowerText.includes('fine-tun')) response = DEMO_RESPONSES.rag;
+    const matchedTopic = findBestTopicMatch(text);
+
+    let responseContent: string;
+    let responseSources: string[];
+
+    if (matchedTopic) {
+      const sampleQuestion = matchedTopic.interviewQuestions?.[0];
+      responseContent = `## ${matchedTopic.title}
+
+### 📌 Overview & Core Mechanics
+${matchedTopic.what}
+
+### 💡 Why It Matters
+${matchedTopic.why}
+
+### ⚙️ How It Works & Architecture
+${matchedTopic.how}
+
+### ⚖️ Architectural Trade-offs
+${matchedTopic.tradeoffs}
+${sampleQuestion ? `\n\n### 🎯 Interview Focus:\n**Q: ${sampleQuestion.q}**\n*A: ${sampleQuestion.a}*` : ''}
+
+You can explore the full interactive documentation and code under **[/topics/${matchedTopic.id}](/topics/${matchedTopic.id})**.`;
+      responseSources = [matchedTopic.title, matchedTopic.subject, ...matchedTopic.tags.slice(0, 3)];
+    } else {
+      responseContent = `I searched your engineering knowledge base for "${text}". While I didn't find an exact matching topic module, here are topics you can explore directly:
+
+- **High-Level Design**: Netflix, Uber, WhatsApp, Twitter, YouTube, Food Delivery, Distributed Rate Limiter
+- **Low-Level Design**: Thread-Safe LRU Cache, Multi-Elevator Scheduler, BookMyShow Concurrency, TinyURL
+- **Distributed Foundations**: Consistent Hashing, 2PC vs Saga, CAP Theorem, Polling vs WebSockets vs SSE
+- **Backend & AI**: Spring Security JWT, Redis Event Loop, PostgreSQL JSONB, Agentic AI, ANPR Edge Vision
+
+Try asking: *"How does Uber do geospatial matching?"* or *"Explain the Saga pattern"*.`;
+      responseSources = ['Engineering Knowledge Base'];
+    }
 
     setMessages((prev) => [
       ...prev,
-      { role: 'assistant', content: response.content, sources: response.sources },
+      { role: 'assistant', content: responseContent, sources: responseSources },
     ]);
     setLoading(false);
   };
