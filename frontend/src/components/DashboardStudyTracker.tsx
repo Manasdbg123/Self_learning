@@ -8,79 +8,113 @@ export default function DashboardStudyTracker() {
   const { completed, bookmarked, lastTopic, loaded } = useStudyProgress();
   const allTopics = getAllTopics();
   const totalTopics = allTopics.length;
-
   const completedCount = completed.length;
   const progressPercent = Math.min(100, Math.round((completedCount / (totalTopics || 1)) * 100));
-
   const resumeTopic = lastTopic ? allTopics.find((t) => t.id === lastTopic) : allTopics[0];
+
+  const milestones = [
+    { pct: 25, label: 'Rookie' },
+    { pct: 50, label: 'Engineer' },
+    { pct: 75, label: 'Senior' },
+    { pct: 100, label: 'Expert' },
+  ];
+  const currentMilestone = milestones.find(m => progressPercent < m.pct) || milestones[milestones.length - 1];
 
   if (!loaded) {
     return (
-      <div className="card p-6 border-indigo-500/20 bg-gradient-to-r from-indigo-950/20 via-zinc-900 to-zinc-950 animate-pulse">
-        <div className="h-6 bg-zinc-800 rounded w-1/3 mb-2"></div>
-        <div className="h-4 bg-zinc-800/60 rounded w-1/2"></div>
+      <div className="topic-hero p-6 md:p-8">
+        <div className="skeleton h-7 w-48 mb-3" />
+        <div className="skeleton h-4 w-80 mb-6" />
+        <div className="skeleton h-3 w-full rounded-full" />
       </div>
     );
   }
 
   return (
-    <div className="card p-6 md:p-8 border-indigo-500/30 bg-gradient-to-br from-indigo-950/30 via-zinc-900 to-zinc-950 shadow-2xl relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-        <div className="space-y-3 max-w-xl">
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+    <div className="topic-hero p-6 md:p-8">
+      {/* Header row */}
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+        {/* Left: title + progress */}
+        <div className="flex-1 space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               Active Curriculum
             </span>
-            <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold flex items-center gap-1">
-              🔥 3-Day Study Streak
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold">
+              🔥 Study Streak Active
+            </span>
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold">
+              🏅 {currentMilestone.label} Level
             </span>
           </div>
 
-          <h2 className="text-2xl md:text-3xl font-extrabold text-zinc-100 tracking-tight">
-            Your Personal Engineering University
-          </h2>
-          <p className="text-zinc-400 text-xs md:text-sm leading-relaxed">
-            Track your progress across 34+ planetary-scale system architectures, low-level design patterns, and distributed foundations.
-          </p>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-100 tracking-tight leading-snug">
+              Your Engineering Study Path
+            </h1>
+            <p className="text-slate-400 text-sm mt-1.5 leading-relaxed max-w-xl">
+              {completedCount === 0
+                ? 'Start your journey — pick a topic and begin mastering system design & engineering concepts.'
+                : `You've mastered ${completedCount} module${completedCount > 1 ? 's' : ''}. Keep the momentum going!`}
+            </p>
+          </div>
 
           {/* Progress bar */}
-          <div className="space-y-1.5 pt-2">
+          <div className="space-y-2 max-w-xl">
             <div className="flex justify-between text-xs font-semibold">
-              <span className="text-zinc-300">{completedCount} of {totalTopics} Modules Mastered</span>
+              <span className="text-slate-300">{completedCount} / {totalTopics} Modules Completed</span>
               <span className="text-indigo-400">{progressPercent}%</span>
             </div>
-            <div className="w-full h-2.5 bg-zinc-800 rounded-full overflow-hidden p-0.5 border border-zinc-700/50">
+            <div className="relative w-full h-3 bg-[#1e2438] rounded-full overflow-hidden border border-[#242840]">
               <div
-                className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full transition-all duration-700 ease-out"
-                style={{ width: `${Math.max(3, progressPercent)}%` }}
-              />
+                className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full transition-all duration-700 ease-out relative"
+                style={{ width: `${Math.max(2, progressPercent)}%` }}
+              >
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow-lg" />
+              </div>
+            </div>
+            {/* Milestone markers */}
+            <div className="flex justify-between text-[10px] text-slate-600">
+              {milestones.map(m => (
+                <span
+                  key={m.pct}
+                  className={progressPercent >= m.pct ? 'text-indigo-400 font-semibold' : ''}
+                >
+                  {m.label}
+                </span>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Quick Resume Card */}
-        <div className="shrink-0 p-5 rounded-2xl bg-zinc-950/80 border border-zinc-800 shadow-xl space-y-3 min-w-[240px]">
-          <div className="text-[11px] uppercase tracking-wider font-bold text-zinc-500">
-            {lastTopic ? 'Resume Where You Left Off' : 'Recommended Next'}
+        {/* Right: quick resume card */}
+        <div className="shrink-0 w-full md:w-64 rounded-2xl bg-[#1a1f2e] border border-[#242840] p-5 space-y-4 shadow-xl">
+          <div className="text-[10px] uppercase tracking-widest font-bold text-slate-500">
+            {lastTopic ? '📌 Resume where you left off' : '🚀 Start here'}
           </div>
           <div>
-            <div className="font-bold text-zinc-100 text-sm truncate max-w-[200px]">
-              {resumeTopic?.title || 'System Design'}
+            <div className="font-bold text-slate-100 text-sm leading-tight">
+              {resumeTopic?.title || 'Netflix System Design'}
             </div>
-            <div className="text-xs text-indigo-400 font-medium">
-              {resumeTopic?.difficulty} · {resumeTopic?.estimatedTime}
+            <div className="flex items-center gap-2 mt-1.5">
+              <span className={`badge badge-${(resumeTopic?.difficulty || 'advanced').toLowerCase()}`}>
+                {resumeTopic?.difficulty || 'Advanced'}
+              </span>
+              <span className="text-xs text-slate-500">⏱ {resumeTopic?.estimatedTime || '45 min'}</span>
             </div>
           </div>
-
           <Link
             href={`/topics/${resumeTopic?.id || 'hld-netflix'}`}
-            className="w-full block text-center py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition shadow-lg shadow-indigo-600/20"
+            className="w-full block text-center py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-all shadow-lg shadow-indigo-600/25 hover:shadow-indigo-500/30 active:scale-95"
           >
-            Start Learning →
+            {lastTopic ? 'Continue Learning →' : 'Start Learning →'}
           </Link>
+          {bookmarked.length > 0 && (
+            <div className="text-[11px] text-slate-500 text-center">
+              ⭐ {bookmarked.length} bookmarked topic{bookmarked.length > 1 ? 's' : ''}
+            </div>
+          )}
         </div>
       </div>
     </div>
