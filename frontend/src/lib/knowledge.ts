@@ -20,7 +20,7 @@ export interface Topic {
   advantages: string[];
   disadvantages: string[];
   tradeoffs: string;
-  alternatives: string[];
+  alternatives?: string[];
   whenToUse: string;
   whenNotToUse: string;
   commonMistakes: string[];
@@ -2433,6 +2433,591 @@ while (true) {
     resources: [{"title": "OpenCV ANPR Tutorial", "url": "https://pyimagesearch.com", "type": "article"}],
     relatedTopics: ["lld-parking-lot", "agentic-llm", "kafka"],
   },
+  // ===== BACKEND ENGINEERING: NETWORK LAYER FUNDAMENTALS =====
+  'backend-networking': {
+    id: 'backend-networking',
+    title: 'Network Layer Fundamentals & The Web Request Lifecycle',
+    subject: 'Backend Engineering',
+    category: 'Backend',
+    difficulty: 'Intermediate',
+    estimatedTime: '50 min',
+    tags: ['networking', 'DNS', 'TLS', 'HTTP', 'CDN', 'WAF'],
+    what: 'Backend systems are anchored to the physical and transport boundaries of the internet. A complete web request travels from client hardware through DNS resolution, CDN edge nodes, WAF/DDoS scrubbing, a reverse proxy/load balancer, TLS termination, an ingress gateway, JWT auth middleware, rate limiting, and finally to the application thread. Engineers must trace every hop to diagnose latency bottlenecks, TCP window starvation, and TLS negotiation failures.',
+    why: 'Understanding the full network path is essential for diagnosing p99 latency issues, configuring TLS correctly, choosing CDN strategies, and designing resilient infrastructure. Without this knowledge, engineers cannot explain why a service is slow or properly secure network traffic.',
+    how: '## DNS Resolution Pipeline\nThe browser checks its local cache and /etc/hosts first, then queries a Recursive Resolver (ISP or public: 1.1.1.1, 8.8.8.8). The resolver traverses the DNS hierarchy: Root DNS (.) → TLD (.com) → Authoritative Nameserver.\n\n**Anycast Routing:** Multiple servers globally share identical BGP IP addresses, routing client traffic to the nearest geographic topological node — enabling sub-10ms DNS for global users.\n\n## TLS Security\n**TLS 1.2:** Requires 2 Round Trips (2-RTT) to exchange cipher suites, negotiate keys via Diffie-Hellman, and verify certificates.\n**TLS 1.3:** Mandates Ephemeral Diffie-Hellman; drops round-trip latency to 1-RTT and supports 0-RTT session resumption for returning users.\n**Forward Secrecy:** Even if the server private key is compromised, historic traffic captures cannot be retroactively decrypted because session keys are ephemeral.',
+    internals: '## Infrastructure Rule\nIn modern high-throughput architectures, public client connections negotiate HTTP/3 or HTTP/2 at an edge proxy (Cloudflare, AWS CloudFront, Nginx), which terminates TLS and proxies traffic over persistent internal HTTP/2 or gRPC keep-alive connections to upstream services.\n\n## Request Lifecycle Stages\n1. Client sends request\n2. Local DNS cache check + OS /etc/hosts\n3. Recursive Resolver lookup\n4. Anycast DNS traversal (Root → TLD → Authoritative)\n5. CDN edge hit/miss decision\n6. WAF DDoS scrubbing + firewall rules\n7. Load Balancer / Reverse Proxy\n8. TLS termination (0-RTT or 1-RTT)\n9. JWT Auth + Rate Limit middleware\n10. Path routing and CORS\n11. DB pool + cache engine\n12. Application business logic',
+    realWorld: 'Cloudflare handles DNS + CDN + WAF for millions of domains simultaneously using Anycast. AWS CloudFront terminates TLS at edge PoPs globally before routing to origin. Major banks require TLS 1.3 with forward secrecy to meet compliance requirements (PCI-DSS). Google has moved entirely to HTTP/3 (QUIC) for its properties.',
+    advantages: [
+      'Anycast routes users to the nearest server automatically, reducing latency',
+      'TLS 1.3 reduces handshake from 2-RTT to 1-RTT, with 0-RTT for returning clients',
+      'CDN edge caching absorbs 80-95% of traffic before it reaches the origin server',
+      'WAF and DDoS scrubbing protect the origin from volumetric attacks'
+    ],
+    disadvantages: [
+      '0-RTT in TLS 1.3 is vulnerable to replay attacks and must be used carefully for idempotent operations only',
+      'Anycast can cause routing loops during BGP instability',
+      'CDN misconfiguration can lead to stale data being served globally',
+      'Deep DNS TTL caching makes failover and blue-green deployments slower'
+    ],
+    tradeoffs: 'More network hops (CDN, WAF, LB) add baseline latency (5-30ms) but massively improve resilience and security. TLS 1.3 0-RTT improves latency but introduces replay attack surface. Anycast improves geographic latency but complicates DDoS attribution.',
+    alternatives: ['Cloudflare / CloudFront CDN edge routing', 'Direct origin hosting (no CDN/WAF proxy)', 'AWS Route53 Latency-Based Routing', 'Service Mesh (Istio / Envoy mTLS)'],
+    whenToUse: 'Always — every production backend must understand and configure the full network path correctly. Especially important when designing multi-region systems, configuring CDN caching rules, or debugging latency spikes.',
+    whenNotToUse: 'Skip CDN for internal microservice-to-microservice traffic on a private VPC — add latency without benefit. Do not use 0-RTT TLS for state-mutating (POST/DELETE) requests.',
+    commonMistakes: [
+      'Forgetting to set Strict-Transport-Security (HSTS) headers, allowing downgrade attacks from HTTPS to HTTP',
+      'Using SHA-1 or RSA-2048 certificates instead of ECDSA with TLS 1.3',
+      'Not configuring CDN cache-control headers correctly, causing private user data to be cached publicly',
+      'Allowing wildcard CORS (Access-Control-Allow-Origin: *) on APIs that handle authenticated requests'
+    ],
+    interviewQuestions: [
+      { q: 'What is the difference between TLS 1.2 and TLS 1.3? Why does 1.3 matter for backend performance?', a: 'TLS 1.2 requires 2 Round Trips (2-RTT) to complete the handshake — exchanging cipher suites, negotiating a session key via Diffie-Hellman, and verifying certificates. TLS 1.3 mandates Ephemeral Diffie-Hellman and streamlines the handshake to 1-RTT, halving connection setup time. It also supports 0-RTT session resumption for returning clients. Critically, TLS 1.3 provides Forward Secrecy — session keys are ephemeral, so a future compromise of the server\'s long-term private key cannot retroactively decrypt previously captured traffic.' },
+      { q: 'How does Anycast DNS routing work and what problem does it solve?', a: 'Anycast assigns the same IP address to multiple geographically distributed servers simultaneously. BGP routing directs incoming packets to the topologically nearest server. This means a DNS query from Mumbai is answered by a Mumbai PoP, not a US data center. It solves geographic latency (reduces DNS resolution from 100ms to <10ms) and provides DDoS resilience — volumetric attacks are absorbed and distributed across many PoPs rather than overwhelming a single origin.' },
+      { q: 'Why does infrastructure terminate TLS at an edge proxy rather than at the application server?', a: 'TLS termination at the edge (Nginx, Cloudflare, AWS ALB) offloads CPU-intensive cryptographic operations from application servers, which can then focus on business logic. It centralizes certificate management and renewal (Let\'s Encrypt / AWS ACM). Internal traffic between the LB and app servers can use mutual TLS (mTLS) or unencrypted HTTP/2 on private VPC networks, reducing overhead while maintaining security boundaries.' }
+    ],
+    resources: [
+      { title: 'High Performance Browser Networking — Ilya Grigorik', url: 'https://hpbn.co', type: 'book', author: 'Ilya Grigorik' },
+      { title: 'Cloudflare Learning Center — DNS', url: 'https://www.cloudflare.com/learning/dns/', type: 'docs' },
+      { title: 'TLS 1.3 — RFC 8446', url: 'https://datatracker.ietf.org/doc/html/rfc8446', type: 'docs' }
+    ],
+    relatedTopics: ['backend-http-protocols', 'backend-caching', 'backend-security'],
+  },
+
+  // ===== BACKEND: HTTP PROTOCOLS =====
+  'backend-http-protocols': {
+    id: 'backend-http-protocols',
+    title: 'HTTP/1.1 vs HTTP/2 vs HTTP/3 & WebSockets',
+    subject: 'Backend Engineering',
+    category: 'Backend',
+    difficulty: 'Intermediate',
+    estimatedTime: '45 min',
+    tags: ['HTTP', 'HTTP/2', 'HTTP/3', 'QUIC', 'WebSockets', 'multiplexing'],
+    what: 'HTTP has evolved from the text-based, single-request-per-connection HTTP/1.1, through binary-framed multiplexed HTTP/2, to the UDP-based QUIC-powered HTTP/3. Each generation solves specific bottlenecks of the previous. WebSockets provide a separate full-duplex persistent connection model for real-time bidirectional communication. Choosing the right protocol fundamentally affects throughput, latency, and infrastructure design.',
+    why: 'HTTP/1.1 Head-of-Line blocking severely limits throughput — browsers compensate by opening 6 parallel TCP sockets per domain, multiplying connection overhead. HTTP/2 solves application-layer HoL blocking but TCP\'s single stream still stalls on packet loss. HTTP/3 over QUIC (UDP) provides true stream independence and 0-RTT handshakes, critical for mobile users on unreliable networks.',
+    how: '## HTTP/1.1\nText headers and chunked bodies. Pipelining is broken in practice; browsers open up to 6 separate TCP sockets per domain to work around HoL blocking.\n\n## HTTP/2\nBinary framing with HPACK header compression. True multiplexing: multiple logical streams over a single TCP connection. Solves HTTP-level HoL blocking, but a single lost TCP packet stalls ALL multiplexed streams due to TCP\'s in-order delivery guarantee.\n\n## HTTP/3 (QUIC over UDP)\nBinary framing with QPACK compression over UDP. Each stream is fully independent — a dropped UDP packet only stalls its own stream. Supports 0-RTT handshakes. Ideal for mobile connections where packet loss is common.\n\n## WebSockets\nEstablished via HTTP Upgrade handshake, then switches to a persistent full-duplex TCP connection. Enables bidirectional streaming. Scaled across backend instances using Redis Pub/Sub as a message backplane.',
+    internals: '## Infrastructure Rule\nPublic client connections negotiate HTTP/3 or HTTP/2 at an edge proxy (Cloudflare, Nginx), which terminates the connection and proxies internally over persistent HTTP/2 or gRPC keep-alive connections to upstream services.\n\n## HPACK Header Compression\nHTTP/2 maintains a shared compression table between client and server. Static table: 61 pre-defined common headers. Dynamic table: learned from the session. Headers like Authorization, Cookie, and Content-Type are sent as single-byte indexes after the first request.\n\n## QUIC Connection IDs\nUnlike TCP (identified by 4-tuple: src IP, src port, dst IP, dst port), QUIC connections use a Connection ID. If a mobile user switches from WiFi to 4G (changing IP address), the QUIC connection migrates transparently without reconnection.',
+    realWorld: 'Google has run HTTP/3 on YouTube and Google Search since 2020. Cloudflare routes 30%+ of its traffic over HTTP/3. Real-time collaboration apps (Figma, Google Docs) use WebSockets for live cursor and document synchronization. Slack uses a WebSocket connection per client, with Redis Pub/Sub routing messages across server instances.',
+    advantages: [
+      'HTTP/3 provides true per-stream independence — packet loss in one stream doesn\'t block others',
+      'HTTP/2 HPACK compression reduces header overhead by 85-95% vs HTTP/1.1',
+      'HTTP/3 0-RTT handshake eliminates connection setup latency for returning clients',
+      'WebSockets enable full-duplex communication with far lower overhead than polling'
+    ],
+    disadvantages: [
+      'HTTP/3 UDP packets are often blocked by enterprise firewalls that whitelist TCP-only',
+      'WebSockets require sticky sessions or a Pub/Sub backplane for horizontal scaling',
+      'HTTP/2 server push (deprecated in Chrome 106) was complex to implement correctly',
+      'QUIC\'s UDP path bypasses many TCP performance optimizations in network hardware'
+    ],
+    tradeoffs: 'HTTP/2 over TCP: Great for reliable networks, poor for high packet-loss mobile. HTTP/3 over UDP: Excellent for mobile, but may be blocked by corporate firewalls. WebSockets: Low latency real-time, but stateful connections complicate horizontal scaling.',
+    alternatives: ['Long Polling / Comet', 'Server-Sent Events (SSE)', 'gRPC over HTTP/2', 'WebTransport (HTTP/3-based)'],
+    whenToUse: 'HTTP/3: Mobile-heavy user bases, global CDN, gaming. HTTP/2: Internal microservice gRPC communication, most API workloads. WebSockets: Live chat, real-time dashboards, collaborative editing, game state synchronization.',
+    whenNotToUse: 'Do not use WebSockets for request-response APIs where HTTP/2 multiplexing is sufficient. Avoid HTTP/3 for corporate internal networks where UDP may be blocked. Don\'t use HTTP/1.1 for any new production service.',
+    commonMistakes: [
+      'Opening too many WebSocket connections from a single client without connection pooling',
+      'Forgetting that HTTP/2 still suffers TCP Head-of-Line blocking on packet loss',
+      'Not implementing WebSocket heartbeat/ping-pong frames, causing silent disconnections',
+      'Using HTTP/1.1 for microservice internal communication, creating unnecessary connection overhead'
+    ],
+    interviewQuestions: [
+      { q: 'What is HTTP Head-of-Line (HoL) blocking and how does each HTTP version address it?', a: 'HTTP/1.1 HoL blocking: browsers send one request per TCP connection and wait for the response before sending the next. Workaround: open 6 parallel TCP connections per domain. HTTP/2 solves this at the application layer with multiplexed binary streams over a single TCP connection — but TCP itself still has HoL blocking: if one TCP packet is lost, all streams wait for retransmission. HTTP/3 (QUIC/UDP) eliminates TCP HoL blocking entirely — streams are independent UDP flows; a lost packet only stalls its own stream.' },
+      { q: 'How do WebSockets scale horizontally across multiple server instances?', a: 'A WebSocket creates a stateful persistent TCP connection to a specific server instance. If a user\'s connection is on Server A but their friend\'s connection is on Server B, direct communication is impossible. Solution: Redis Pub/Sub backplane. When Server A receives a message, it publishes to a Redis channel. All servers subscribe to that channel and push the message to their locally connected clients. This decouples WebSocket routing from the application layer.' },
+      { q: 'Why is QUIC built on UDP rather than TCP, and what are the trade-offs?', a: 'QUIC is built on UDP because TCP\'s reliable ordered delivery guarantee is implemented in the kernel and cannot be modified by user-space applications. QUIC implements its own reliable ordered delivery per-stream in user space (the QUIC library), allowing streams to be independent. Advantage: no TCP HoL blocking; faster 0-RTT handshakes. Trade-off: UDP is often rate-limited or blocked by enterprise firewalls and network middleboxes; QUIC must also re-implement congestion control in user space.' }
+    ],
+    resources: [
+      { title: 'HTTP/3 Explained — Daniel Stenberg', url: 'https://http3-explained.haxx.se', type: 'book', author: 'Daniel Stenberg' },
+      { title: 'WebSockets — Mozilla MDN', url: 'https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API', type: 'docs' }
+    ],
+    relatedTopics: ['backend-networking', 'backend-api-design'],
+  },
+
+  // ===== BACKEND: CONCURRENCY & RUNTIMES =====
+  'backend-concurrency-runtimes': {
+    id: 'backend-concurrency-runtimes',
+    title: 'Backend Runtimes, Threading & Concurrency Architectures',
+    subject: 'Backend Engineering',
+    category: 'Backend',
+    difficulty: 'Advanced',
+    estimatedTime: '60 min',
+    tags: ['concurrency', 'threading', 'Node.js', 'Go', 'JVM', 'virtual-threads', 'event-loop', 'goroutines', 'GIL'],
+    what: 'Backend throughput is fundamentally constrained by how a programming language runtime executes instructions against operating system threads and system resources. Node.js uses a single-threaded event loop with libuv for async I/O. Go uses M:N goroutine scheduling via CSP (Communicating Sequential Processes). Java/JVM uses OS threads with thread pools, now complemented by Project Loom Virtual Threads. Python is constrained by the GIL (Global Interpreter Lock) and uses WSGI/ASGI to compensate.',
+    why: 'Engineers must choose the right concurrency model to avoid thread exhaustion (Java thread pools), event loop starvation (Node.js CPU blocking), and GIL bottlenecks (Python). Wrong choices cause p99 latency spikes, connection drops under load, and CPU underutilization. The concurrency model determines the framework, infrastructure sizing, and scaling strategy.',
+    how: '## Node.js: Single-Threaded Event Loop (Libuv)\nNode.js runs JavaScript on Google V8 engine with async I/O via libuv. The event loop phases: Timers (setTimeout) → I/O Callbacks → Idle/Prepare → Poll (epoll/kqueue) → Check (setImmediate) → Close.\nWorker Pool: DNS resolution, file system, and crypto operations run on a dedicated 4-thread pool, offloading the main event loop.\nConstraint: Any synchronous CPU-intensive loop blocks the entire event loop, spiking p99 latency for ALL connected users.\n\n## Go: M:N Goroutine Scheduler\nGo uses Communicating Sequential Processes (CSP) — goroutines communicate through typed channels, not shared memory. The scheduler multiplexes M goroutines onto N OS threads using G (Goroutine), M (Machine/Thread), P (Processor context). Goroutines start with only 2KB stack (vs 1-2MB for OS threads), expanding dynamically. Work Stealing: idle P processors steal goroutines from busy P queues.\n\n## Java JVM: OS Threads vs Virtual Threads\nTraditional Java: 1 application thread = 1 OS kernel thread. Thread pools (Tomcat: 200 threads) cause thread exhaustion under high concurrency. Project Loom (JDK 21+): User-mode Virtual Threads managed by the JVM. Block on I/O without blocking the carrier OS thread — the JVM parks the virtual thread and uses the OS thread for something else.\n\n## Python: WSGI vs ASGI & GIL\nCPython\'s Global Interpreter Lock prevents concurrent native Python bytecode execution across multiple CPU cores. WSGI (Flask/Django): Synchronous per worker, scaled via Gunicorn multi-process prefork. ASGI (FastAPI/Starlette): Async using Python asyncio event loop — coroutines yield control during socket reads/writes.',
+    internals: '## Framework Comparison\n- Spring Boot (Java/Kotlin): Multi-threaded / Virtual Threads → Enterprise banking, ERPs\n- Express/NestJS (Node.js): Single-thread Event Loop → BFF, real-time chat\n- FastAPI (Python 3.10+): ASGI/Asyncio → ML model serving, analytics\n- Gin/Fiber (Go): Goroutine per HTTP connection → Ultra-low latency proxies\n- ASP.NET Core (C#): Managed ThreadPool with async/await → Enterprise cloud APIs\n\n## Architectural Guideline\nFor CPU-bound tasks (image processing, video transcoding, ML inference), avoid single-threaded Node.js and GIL-bound Python. Offload to Go, Rust, or C++ worker processes via message queues (Kafka, SQS).',
+    realWorld: 'Node.js powers Netflix\'s BFF layer serving 250M+ subscribers. Go powers Uber\'s real-time dispatch and matching microservices. Java Virtual Threads (JDK 21) enabled Spring Boot apps to handle 10× more concurrent connections with the same thread count. Discord migrated from Elixir to Go for its Presence service, handling 5M concurrent users.',
+    advantages: [
+      'Go goroutines: 2KB stack vs 1-2MB OS thread — 1000× more concurrent requests per GB of RAM',
+      'Node.js event loop excels at I/O-bound workloads with thousands of concurrent connections',
+      'Java Virtual Threads (JDK 21) eliminate thread pool exhaustion without rewriting to async/await',
+      'Python ASGI (FastAPI) enables high-concurrency APIs without the GIL blocking socket I/O'
+    ],
+    disadvantages: [
+      'Node.js: Any synchronous CPU work (regex, crypto, parsing) blocks ALL users on the event loop',
+      'Python GIL prevents true CPU parallelism across cores in a single process',
+      'Go goroutine leaks (forgotten goroutines blocking on channels) cause slow OOM crashes',
+      'Java thread-per-request model (pre-Loom) exhausted 200-thread pools at 200 concurrent slow requests'
+    ],
+    tradeoffs: 'Event loop (Node.js, Python ASGI) vs Thread pool (Java Spring): Event loops excel at I/O concurrency but fail at CPU work. Thread pools handle CPU bursts but exhaust at high connection counts. Goroutines (Go) strike the best balance for most backend workloads.',
+    alternatives: ['Thread-per-request model (Tomcat / Traditional Java)', 'Event-driven single-threaded event loop (Node.js)', 'Virtual threads / Fibers (Java Project Loom, Go Goroutines)', 'Actor model (Akka / Erlang/OTP)'],
+    whenToUse: 'Node.js/ASGI: High-concurrency I/O APIs, BFF layers, chat services. Go: Ultra-low latency microservices, network proxies, CLI tools. Java Virtual Threads (JDK 21+): Migrating existing Spring apps to higher concurrency without rewrite. Python: ML model serving endpoints, data pipeline APIs.',
+    whenNotToUse: 'Do not use Node.js for CPU-bound tasks (video encoding, cryptography, ML inference). Avoid Python GIL-bound code for CPU-parallel computation — use multiprocessing or Go/Rust workers instead.',
+    commonMistakes: [
+      'Blocking the Node.js event loop with synchronous JSON.parse() on large payloads in a request handler',
+      'Creating goroutines without tracking their lifecycle, causing goroutine leaks that slowly OOM the process',
+      'Using Python threading for CPU-bound tasks — GIL serializes execution, providing no speedup',
+      'Under-sizing Java thread pools (Tomcat default: 200) for services with slow downstream HTTP calls'
+    ],
+    interviewQuestions: [
+      { q: 'Explain the Node.js event loop and what happens when a synchronous task blocks it.', a: 'Node.js runs a single-threaded event loop using libuv. The loop processes phases in order: Timers (setTimeout callbacks) → I/O Callbacks (completed async operations) → Poll (retrieving new I/O events, blocking if none) → Check (setImmediate) → Close. When any synchronous code runs (e.g., a 500ms for loop, synchronous file read, bcrypt hash), the event loop is blocked for that entire duration. All other users\' HTTP requests queue up waiting. This is catastrophic in production — a single bad handler can spike p99 latency for every connected user.' },
+      { q: 'How do Go goroutines differ from OS threads? Why can Go handle 100,000 concurrent connections?', a: 'OS threads have 1-2MB initial stack allocation managed by the kernel, with expensive context switching (~1-10μs). Go goroutines start with only a 2KB stack in user space, growing dynamically up to 1GB. The Go runtime scheduler multiplexes thousands of goroutines onto a small number of OS threads (typically GOMAXPROCS = number of CPU cores) using M:N scheduling with work stealing. A blocked goroutine (waiting on I/O or channel) is parked cheaply without blocking its OS thread. Result: 100,000 goroutines consume ~200MB RAM vs ~100GB for 100,000 OS threads.' },
+      { q: 'What is Python\'s GIL and how does ASGI (FastAPI) work around it for I/O-bound workloads?', a: 'The Global Interpreter Lock is a mutex in CPython that ensures only one thread executes Python bytecode at a time, preventing memory corruption in CPython\'s reference counting garbage collector. This means CPU-bound parallel Python code on 8 cores runs no faster than on 1 core. For I/O-bound workloads, ASGI frameworks like FastAPI use Python\'s asyncio event loop. Coroutines (async/await) yield control to the event loop during I/O operations (socket reads, database queries), so the GIL is released during I/O waits. The event loop can then advance other coroutines, achieving high concurrency despite the GIL.' }
+    ],
+    resources: [
+      { title: 'Go Concurrency Patterns — Rob Pike', url: 'https://talks.golang.org/2012/concurrency.slide', type: 'article', author: 'Rob Pike' },
+      { title: 'Project Loom — JDK 21 Virtual Threads', url: 'https://openjdk.org/jeps/444', type: 'docs' },
+      { title: 'Node.js Event Loop — libuv docs', url: 'https://nodejs.org/en/docs/guides/event-loop-timers-and-nexttick', type: 'docs' }
+    ],
+    relatedTopics: ['backend-http-protocols', 'backend-databases-rdbms'],
+  },
+
+  // ===== BACKEND: RDBMS & SQL INTERNALS =====
+  'backend-databases-rdbms': {
+    id: 'backend-databases-rdbms',
+    title: 'Relational Databases (RDBMS) & SQL Internals',
+    subject: 'Backend Engineering',
+    category: 'Backend',
+    difficulty: 'Advanced',
+    estimatedTime: '70 min',
+    tags: ['PostgreSQL', 'MySQL', 'ACID', 'transactions', 'indexes', 'B-tree', 'connection-pooling', 'SQL', 'MVCC'],
+    what: 'Relational databases provide strict schema contracts, declarative SQL querying, and ACID transactional consistency. ACID stands for Atomicity (all mutations commit or all abort via WAL), Consistency (schema constraints preserved), Isolation (concurrent transactions isolated by level), and Durability (committed data survives crashes via fsync). Storage engines use B+ Tree indexes for sorted O(log N) lookups and range queries, or LSM Trees for write-heavy workloads. Connection pooling (HikariCP, PgBouncer) is essential to avoid the overhead of creating new DB connections per request.',
+    why: 'Relational databases are the backbone of most business applications. Without mastering SQL internals (indexes, isolation levels, query plans), engineers write queries that cause full table scans, deadlocks, and slow under load. Misunderstanding isolation levels leads to data races (dirty reads, phantom reads) that corrupt financial data. Connection pool exhaustion crashes services under load.',
+    how: '## ACID Properties\n- **Atomicity:** WAL (Write-Ahead Log) ensures incomplete transactions can be rolled back on crash recovery\n- **Consistency:** Foreign key constraints, unique indexes, and CHECK constraints verified on every write\n- **Isolation:** Controlled via ANSI isolation levels (Read Uncommitted → Serializable)\n- **Durability:** WAL flushed to disk (fsync) before transaction commit confirmation\n\n## B+ Tree Indexes (PostgreSQL, MySQL)\nSelf-balancing tree with all data in leaf nodes, linked sequentially. O(log N) for point lookups. Leaf node linking enables blazingly fast range queries (BETWEEN, >, <). Composite indexes follow the Equality-Range-Sort heuristic: most selective columns first.\n\n## LSM Trees (Cassandra, RocksDB)\nWrites append to in-memory MemTable + WAL. When full, flush to immutable SSTable on disk. Background compaction merges SSTables. Ideal for write-heavy workloads; reads may require checking multiple SSTables (mitigated by Bloom filters).\n\n## Connection Pooling\nOpening a DB connection is expensive: TCP handshake, authentication, process fork (Postgres), ~5-10MB memory allocation per connection. Poolers maintain warm reusable connections. Optimal pool size: connections = (core_count × 2) + effective_spindle_count',
+    internals: '## ANSI Isolation Levels\n- **Read Uncommitted:** Allows Dirty Reads (reading uncommitted data from concurrent transactions)\n- **Read Committed:** Eliminates Dirty Reads; still allows Non-Repeatable Reads\n- **Repeatable Read:** Snapshot guarantees; prevents Non-Repeatable Reads; may allow Phantom Reads\n- **Serializable:** Complete isolation via strict 2PL or Serializable Snapshot Isolation (SSI)\n\n## Normalization vs. Denormalization\n- **1NF:** Atomic column values, no repeating groups\n- **2NF:** Non-prime attributes fully depend on candidate key (no partial dependencies)\n- **3NF/BCNF:** No transitive functional dependencies; eliminates data duplication\n- **Denormalization:** Duplicate fields (e.g., user_name on orders) for high read throughput; risks update anomalies\n\n## Query Optimization\nUse EXPLAIN (ANALYZE, BUFFERS). Watch for: Sequential Scans (Seq Scan) on large tables, Nested Loop joins on unbounded records, missing composite indexes.',
+    realWorld: 'PostgreSQL powers Shopify (millions of merchants, petabytes of transaction data), Instagram (user data + social graph), and GitHub (repository metadata). HikariCP is the default connection pooler for Spring Boot. PgBouncer is used by Heroku and AWS RDS Proxy to multiplex thousands of app connections to a PostgreSQL instance limited to ~100 max connections.',
+    advantages: [
+      'ACID guarantees ensure financial data integrity even during concurrent writes and crashes',
+      'B+ Tree indexes enable O(log N) point lookups and blazing-fast range queries',
+      'SQL is declarative — the query planner chooses the optimal execution path automatically',
+      'Mature tooling: EXPLAIN plans, pg_stat_statements, pgBadger for query analysis'
+    ],
+    disadvantages: [
+      'Horizontal write sharding is complex — requires application-level routing or Citus extension',
+      'Schema migrations on large tables require careful planning to avoid table locks',
+      'SERIALIZABLE isolation significantly reduces concurrent write throughput',
+      'Connection overhead (~5-10MB per connection) requires pooling for high-concurrency apps'
+    ],
+    tradeoffs: 'Normalization vs. Denormalization: normalized schemas have zero data duplication but require expensive JOINs at read time; denormalized schemas have fast reads but complex write logic. Serializable isolation vs. Read Committed: stronger isolation = fewer anomalies but more lock contention and lower throughput.',
+    alternatives: ['PostgreSQL (ACID, MVCC, rich extensions)', 'MySQL / MariaDB (InnoDB, high-volume replication)', 'CockroachDB / YugabyteDB (Distributed SQL, Spanner model)', 'SQLite (Embedded, zero-latency serverless)'],
+    whenToUse: 'Financial systems, order management, user accounts, inventory — anywhere ACID compliance, referential integrity, and complex querying are required. Use PostgreSQL JSONB for semi-structured data within a relational model.',
+    whenNotToUse: 'Avoid RDBMS for: time-series data (use TimescaleDB/InfluxDB), full-text search (Elasticsearch), session storage (Redis), or horizontally scaled write-heavy workloads (use Cassandra).',
+    commonMistakes: [
+      'Not adding an index on foreign key columns, causing full table scans on every JOIN',
+      'Running long-running transactions that hold row locks and block concurrent writers',
+      'Using SELECT * in production queries, preventing index-only scans',
+      'Not using connection pooling (HikariCP/PgBouncer), causing connection exhaustion under load',
+      'Running schema migrations (ALTER TABLE ADD COLUMN) without testing on a production-sized dataset first'
+    ],
+    interviewQuestions: [
+      { q: 'What are ACID properties? Give an example of how each is enforced in PostgreSQL.', a: 'Atomicity: PostgreSQL uses a Write-Ahead Log (WAL). If a transaction fails mid-way, the WAL replay rolls back all changes. Consistency: Constraints (UNIQUE, FK, CHECK) are verified before commit; the transaction aborts if violated. Isolation: PostgreSQL uses MVCC (Multi-Version Concurrency Control) — readers see a snapshot of the database at their transaction start time, without blocking writers. Isolation level is configurable per transaction. Durability: PostgreSQL calls fsync() to flush the WAL buffer to disk before acknowledging commit to the client.' },
+      { q: 'Why is connection pooling critical for PostgreSQL? How does PgBouncer work?', a: 'PostgreSQL uses a process-per-connection model (fork()). Each new connection spawns a new OS process with ~5-10MB of memory for stack, authentication, and query buffers. 1000 concurrent app connections = 10GB memory overhead just for connection processes, often exceeding available RAM. PgBouncer sits between the app and PostgreSQL, maintaining a warm pool of authenticated connections. When an app connection wants to execute a query, PgBouncer lends it a pooled server connection, executes the query, then returns the server connection to the pool. The app sees 1000 connections; PostgreSQL sees only 20-50.' },
+      { q: 'What is the difference between B+ Tree indexes and LSM Tree indexes?', a: 'B+ Tree (PostgreSQL, MySQL): A self-balancing tree with data sorted in leaf nodes linked sequentially. Point lookups: O(log N). Range queries (BETWEEN, ORDER BY): very fast due to leaf node linking. Writes perform random I/O to maintain sorted order. LSM Tree (Cassandra, RocksDB): Writes are always sequential — appended to an in-memory MemTable, then flushed to immutable sorted SSTables on disk. Background compaction merges SSTables. Writes are 10-100× faster than B-Tree. Reads may check multiple SSTables (mitigated by Bloom filters). Best for write-heavy append-only workloads.' }
+    ],
+    resources: [
+      { title: 'PostgreSQL Documentation — MVCC', url: 'https://www.postgresql.org/docs/current/mvcc.html', type: 'docs' },
+      { title: 'Use The Index, Luke! — SQL Indexing Guide', url: 'https://use-the-index-luke.com', type: 'article' },
+      { title: 'Designing Data-Intensive Applications — Martin Kleppmann', url: 'https://dataintensive.net', type: 'book', author: 'Martin Kleppmann' }
+    ],
+    relatedTopics: ['backend-nosql', 'backend-caching'],
+  },
+
+  // ===== BACKEND: NoSQL =====
+  'backend-nosql': {
+    id: 'backend-nosql',
+    title: 'NoSQL Architecture & Specialized Data Stores',
+    subject: 'Backend Engineering',
+    category: 'Backend',
+    difficulty: 'Advanced',
+    estimatedTime: '60 min',
+    tags: ['MongoDB', 'Redis', 'Cassandra', 'NoSQL', 'document-store', 'key-value', 'wide-column', 'vector-db', 'graph-db'],
+    what: 'NoSQL systems break relational constraints to prioritize horizontal scalability, flexible semi-structured documents, or specific mathematical abstractions (graphs, vectors, time-series). Document stores (MongoDB): semi-structured BSON/JSON with dynamic schemas. Key-Value (Redis): sub-millisecond in-memory operations with rich data structures. Wide-Column (Cassandra): masterless ring topology for linear horizontal write scalability. Graph (Neo4j): index-free adjacency for O(1) relationship traversal. Vector DBs (Pinecone, Milvus): approximate nearest-neighbor search for ML embeddings.',
+    why: 'No single database paradigm handles every workload optimally. Mature systems use Polyglot Persistence: PostgreSQL for transactions, MongoDB for catalog data, Redis for sessions, Elasticsearch for search, and Kafka for event logs. Understanding each NoSQL engine prevents catastrophic design mistakes like storing unbounded arrays in MongoDB documents (16MB limit) or violating Cassandra\'s partition key access patterns.',
+    how: '## MongoDB Document Store\nBSON/JSON documents with dynamic schemas (no DDL locks for schema evolution). WiredTiger storage engine: document-level locking, snappy/zstd compression, replica sets using Raft-based leader election.\nEmbed vs. Reference: Embed data accessed together (1:few relationships); reference separate collections for unbounded 1:many (avoid 16MB document limit).\n\n## Redis In-Memory Key-Value\nSingle-threaded event loop with multiplexed I/O → sub-millisecond operations. Data structures: Strings, Hashes, Lists, Sets, Sorted Sets (SkipLists), HyperLogLog, Bitmaps, Streams. Persistence: RDB (periodic snapshot via fork) + AOF (Append-Only File with rewrite). Redis Cluster: 16,384 hash slots distributed via CRC16(key) hashing.\n\n## Cassandra Wide-Column Store\nMasterless peer-to-peer ring based on Amazon Dynamo paper + Google Bigtable. Partition Key hashed via Murmur3 to locate storage nodes. Clustering Key controls on-disk data sorting within a partition. Tunable consistency: ONE, QUORUM, ALL. If R + W > N → strong consistency guaranteed.\n\n## Graph & Vector Databases\nNeo4j: Index-free adjacency; pointer chasing provides O(1) traversal of relationships (vs expensive recursive SQL JOINs). Vector DBs (Pinecone, Milvus, pgvector): HNSW/IVFFlat approximate nearest-neighbor search for high-dimensional embedding similarity search.',
+    internals: '## Polyglot Persistence Pattern\nProduction e-commerce platform example: PostgreSQL (ledger transactions, order management) + MongoDB (dynamic product catalog attributes) + Redis (user sessions, shopping cart) + Elasticsearch (product search with fuzzy matching) + Kafka (order event log for analytics and downstream services).\n\n## Database Selection Matrix\n- RDBMS: ACID compliance, complex queries, read replicas → rigid horizontal write sharding\n- Document: Rapid prototyping, dynamic schemas, auto-sharding → no distributed JOINs\n- Key-Value: Sub-millisecond latency, pub-sub, caches → limited by physical RAM\n- Wide-Column: Linear horizontal write scaling, zero single point of failure → query patterns must be locked at design time\n- Search Engine: Full-text search, fuzzy matching, log aggregation → eventual consistency',
+    realWorld: 'MongoDB powers Airbnb\'s listing catalog (dynamic attributes per property type). Redis powers Twitter/X\'s timeline cache (300M users\' cached timelines). Cassandra is used by Apple (10 PB), Netflix (streaming state), and Discord (message storage). Neo4j powers LinkedIn\'s People You May Know feature and fraud detection graph queries.',
+    advantages: [
+      'MongoDB schema flexibility enables rapid feature iteration without DDL migration downtime',
+      'Redis delivers sub-millisecond p99 latency — 10-100× faster than PostgreSQL for cache reads',
+      'Cassandra provides linear horizontal write scaling — adding nodes doubles write throughput',
+      'Vector DBs enable semantic search over billions of embeddings with millisecond ANN query time'
+    ],
+    disadvantages: [
+      'MongoDB: No distributed JOINs; denormalized documents increase update complexity',
+      'Redis: Dataset limited by physical RAM budget; expensive for large datasets',
+      'Cassandra: Query patterns must be designed around partition keys before schema creation',
+      'Vector DBs: Approximate (not exact) nearest-neighbor search; results are probabilistic'
+    ],
+    tradeoffs: 'Schema flexibility (MongoDB) vs. relational integrity (PostgreSQL). Sub-ms speed (Redis) vs. disk persistence (PostgreSQL). Linear write scale (Cassandra) vs. JOIN capability (PostgreSQL). ANN accuracy vs. search latency (HNSW vs brute-force in Vector DBs).',
+    alternatives: ['MongoDB (Document store, rich query engine)', 'Cassandra / ScyllaDB (Wide-column, masterless AP)', 'Redis (In-memory key-value data structures)', 'Neo4j (Property graph database)'],
+    whenToUse: 'MongoDB: Product catalogs, user profiles, CMS content. Redis: Sessions, rate limiting, real-time leaderboards, pub/sub. Cassandra: IoT time-series, activity feeds, messaging. Neo4j: Social graphs, fraud detection, recommendation systems.',
+    whenNotToUse: 'Do not use MongoDB for financial ledgers requiring strong ACID. Avoid Redis as the primary persistent store for data larger than available RAM. Never use Cassandra for ad-hoc queries without pre-designed partition key access patterns.',
+    commonMistakes: [
+      'Growing MongoDB documents beyond 16MB by embedding unbounded arrays (use referencing instead)',
+      'Using Cassandra for queries that require filtering on non-partition-key columns (allow filtering is a red flag)',
+      'Storing large binary blobs in Redis, exhausting memory budget for cache data',
+      'Using Redis as the primary database without enabling AOF persistence, losing data on crash'
+    ],
+    interviewQuestions: [
+      { q: 'When would you use Cassandra over PostgreSQL? What query access patterns does Cassandra require?', a: 'Choose Cassandra when: you need linear horizontal write scalability (adding nodes = proportionally more write throughput), you have a high-write time-series or event-log workload, or you need 99.999% availability with no single point of failure (masterless ring). Cassandra requires: queries must always include the partition key (Murmur3-hashed to locate the node). The clustering key defines on-disk sort order for range queries within a partition. Table schemas must be designed around your query patterns upfront — Cassandra is query-first, not entity-first. Running ALLOW FILTERING bypasses this model and causes full table scans.' },
+      { q: 'Explain the difference between Redis RDB and AOF persistence modes.', a: 'RDB (Redis Database Backup): Periodically forks the Redis process and writes a point-in-time snapshot to disk. Very compact. Fast restart. Risk: data since the last snapshot is lost on crash (typically 1-15 minutes of data). AOF (Append-Only File): Logs every write command to a file. On restart, Redis replays the AOF to reconstruct state. Configurable fsync: always (every write, most durable), everysec (every second, 1s data loss risk), or never (OS decides). AOF rewrite periodically compacts the file by replaying the current state. Most production deployments use both: RDB for fast restarts, AOF for durability.' },
+      { q: 'How does Cassandra achieve tunable consistency? What is quorum?', a: 'Cassandra replicates each partition to N replica nodes (configured by Replication Factor). For each read (R) and write (W) operation, you configure how many replicas must respond. If R + W > N, strong consistency is guaranteed because at least one replica must have participated in both the last write and the current read. Example: N=3, W=2, R=2 → quorum (QUORUM). N=3, W=3, R=1 → ALL writes, ONE read (very durable writes, fast reads). N=3, W=1, R=1 → ONE (lowest latency, highest availability, eventual consistency).' }
+    ],
+    resources: [
+      { title: 'MongoDB Data Modeling Guide', url: 'https://www.mongodb.com/docs/manual/core/data-modeling-introduction/', type: 'docs' },
+      { title: 'Redis Data Structures', url: 'https://redis.io/docs/data-types/', type: 'docs' },
+      { title: 'Cassandra: The Definitive Guide', url: 'https://www.oreilly.com/library/view/cassandra-the-definitive/9781492097136/', type: 'book' }
+    ],
+    relatedTopics: ['backend-databases-rdbms', 'backend-caching', 'backend-distributed-systems'],
+  },
+
+  // ===== BACKEND: API DESIGN =====
+  'backend-api-design': {
+    id: 'backend-api-design',
+    title: 'API Design: REST, GraphQL & gRPC',
+    subject: 'Backend Engineering',
+    category: 'Backend',
+    difficulty: 'Intermediate',
+    estimatedTime: '55 min',
+    tags: ['REST', 'GraphQL', 'gRPC', 'Protobuf', 'API', 'HTTP', 'HATEOAS', 'OpenAPI'],
+    what: 'APIs establish the boundary contracts of modern backend engineering. REST (Representational State Transfer) is the dominant stateless HTTP API paradigm using resources and HTTP verbs. GraphQL provides a strongly-typed schema where clients define exactly which fields they need. gRPC uses Protocol Buffers (Protobuf) over HTTP/2 for up to 10× faster binary serialization, code-generated stubs, and native streaming support. The choice of API paradigm dictates serialization speed, wire efficiency, client-server coupling, and caching dynamics.',
+    why: 'REST over-fetching wastes bandwidth (returning 50 fields when the client needs 5). GraphQL N+1 query problems destroy database performance if not mitigated with DataLoader. gRPC requires HTTP/2 and is incompatible with browser clients without a gRPC-Web proxy. Choosing the wrong paradigm creates performance bottlenecks, versioning nightmares, and tight coupling.',
+    how: '## REST\nRichardson Maturity Model: Level 0 (RPC-style) → Level 1 (Resources) → Level 2 (HTTP Verbs: GET, POST, PUT, DELETE) → Level 3 (HATEOAS: hypermedia links in responses). Caching: ETag + Cache-Control: max-age allows intermediary proxies to cache responses. Idempotency: GET/PUT/DELETE must be safe and idempotent; POST is non-idempotent.\n\n## GraphQL\nStrong Type Schema: SDL (Schema Definition Language) defines types, queries, mutations, and subscriptions. Clients specify exact fields → eliminates over-fetching. DataLoader: batches and memoizes N+1 database queries within a single request cycle (solves the classic N+1 problem).\n\n## gRPC + Protocol Buffers\nProtobuf serialization: up to 10× faster and significantly smaller than text JSON. Multiplexed streams over HTTP/2: natively supports unary, client streaming, server streaming, and bidirectional streaming. Code generation: compiles type-safe client stubs across Go, Java, Python, and C++.',
+    internals: '## Protobuf vs JSON\nProtobuf fields are encoded with field numbers (not string keys), using variable-length encoding. A Person{name: "Alice", age: 30} serializes to ~9 bytes in Protobuf vs ~25 bytes in JSON. No schema = no parsing ambiguity.\n\n## GraphQL DataLoader Pattern\nWithout DataLoader: fetching 100 posts each with an author field causes 101 database queries (1 for posts + 1 per author). With DataLoader: all author IDs from a request batch are collected, a single IN query fetches them all, results are memoized and distributed to resolvers.\n\n## API Versioning Strategies\n- URL versioning: /api/v1/users (simple, cache-friendly)\n- Header versioning: Accept: application/vnd.api.v2+json (clean URLs, harder to test)\n- GraphQL: add fields, deprecate old ones (non-breaking by default)\n- gRPC: field numbers are stable; new fields are ignored by old clients (backward compatible)',
+    realWorld: 'GitHub v4 API is GraphQL. Kubernetes API server uses Protocol Buffers internally (and REST externally). Netflix uses gRPC for service-to-service communication (Protobuf, HTTP/2). Shopify\'s Storefront API is GraphQL. Twitter\'s internal microservices use Protobuf over Kafka.',
+    advantages: [
+      'gRPC Protobuf: 10× faster serialization and 60-80% smaller payload vs JSON REST',
+      'GraphQL: clients fetch exactly the fields they need, eliminating over-fetching on mobile',
+      'gRPC bidirectional streaming: enables real-time push without WebSocket complexity',
+      'REST: simple, cacheable, and understood by every HTTP client and reverse proxy'
+    ],
+    disadvantages: [
+      'gRPC is incompatible with browser clients without a gRPC-Web proxy (Envoy)',
+      'GraphQL N+1 problem: naive resolver implementations cause explosive database query counts',
+      'REST over-fetching: returning 50 fields when the mobile app needs only 5',
+      'GraphQL caching is complex — queries are POST requests, bypassing HTTP caching'
+    ],
+    tradeoffs: 'REST: simple, cacheable, universal client support. GraphQL: precise data fetching, complex caching. gRPC: highest performance, code-gen discipline, HTTP/2 required. Internal microservices: gRPC wins. Public APIs: REST or GraphQL.',
+    alternatives: ['RESTful JSON API', 'GraphQL (Declarative client-driven querying)', 'gRPC with Protocol Buffers (High-performance RPC)', 'tRPC (Type-safe RPC for TypeScript)'],
+    whenToUse: 'REST: Public APIs, third-party integrations, simple CRUD services. GraphQL: Mobile apps with diverse data needs, BFF aggregation layers, complex nested data. gRPC: Internal service-to-service communication, streaming data pipelines, performance-critical microservices.',
+    whenNotToUse: 'Do not use gRPC for public browser-facing APIs without a gRPC-Web proxy. Avoid GraphQL for simple CRUD APIs where REST is sufficient. Do not skip DataLoader in GraphQL resolvers that access related entities.',
+    commonMistakes: [
+      'Not using DataLoader in GraphQL, causing N+1 database queries per request',
+      'Exposing gRPC services directly to the internet without an API gateway or gRPC-Web proxy',
+      'Using POST for all REST operations instead of correct HTTP verbs (breaking caching and idempotency)',
+      'Returning HTTP 200 for error responses in REST (should use 4xx/5xx codes)'
+    ],
+    interviewQuestions: [
+      { q: 'What is the GraphQL N+1 problem and how does DataLoader solve it?', a: 'The N+1 problem: a GraphQL query fetches a list of N posts, and each post\'s resolver fetches the author via a separate DB query → 1 + N total queries. For 100 posts: 101 queries. DataLoader solves this with two techniques: Batching (collects all IDs requested within the same event loop tick, then fires a single batched IN query), and Memoization (caches results within the request lifecycle, so the same entity is never fetched twice). Result: 101 queries become 2 (1 for posts, 1 batched query for all unique authors).' },
+      { q: 'How does Protocol Buffers (Protobuf) serialization differ from JSON? Why is it faster?', a: 'JSON is text-based: field names are full strings, values are human-readable text. Every byte is meaningful but verbose. Protobuf is binary: each field is identified by a compact field number (not a string key), values use variable-length encoding (smaller integers encode to fewer bytes). A 30-character JSON key like \'shipping_address_street_1\' becomes a single 1-byte varint field tag. No type ambiguity (schema defines types). No field name parsing. Result: Protobuf is typically 60-80% smaller and 5-10× faster to serialize/deserialize than equivalent JSON.' },
+      { q: 'What are REST idempotency guarantees? Why do they matter?', a: 'Idempotency: calling the same endpoint multiple times produces the same result as calling it once. GET (safe + idempotent): read-only, no side effects. PUT (idempotent): replace resource completely; retrying on network error won\'t create duplicates. DELETE (idempotent): deleting already-deleted resource returns 404 but causes no additional side effects. POST (non-idempotent): creating a new resource each time. Idempotency matters for retry logic: if a network request times out, it\'s safe to retry GET/PUT/DELETE but retrying POST may create duplicate records. This is why payment APIs use idempotency keys.' }
+    ],
+    resources: [
+      { title: 'gRPC Documentation', url: 'https://grpc.io/docs/', type: 'docs' },
+      { title: 'GraphQL DataLoader', url: 'https://github.com/graphql/dataloader', type: 'docs' },
+      { title: 'REST API Design Best Practices', url: 'https://restfulapi.net', type: 'article' }
+    ],
+    relatedTopics: ['backend-http-protocols', 'backend-messaging', 'backend-security'],
+  },
+
+  // ===== BACKEND: MESSAGING & EVENT-DRIVEN =====
+  'backend-messaging': {
+    id: 'backend-messaging',
+    title: 'Async Event-Driven Architecture & Message Brokers',
+    subject: 'Backend Engineering',
+    category: 'Backend',
+    difficulty: 'Advanced',
+    estimatedTime: '65 min',
+    tags: ['Kafka', 'RabbitMQ', 'SQS', 'event-driven', 'pub-sub', 'Saga', 'distributed-transactions', 'message-queue'],
+    what: 'Event-driven architectures decouple producer emissions from consumer processing, ensuring systemic resilience during traffic spikes. Message Queues (RabbitMQ, AWS SQS): push-based delivery, message deleted on ACK, competing consumers share a single queue. Distributed Commit Logs (Apache Kafka, Redpanda): persistent append-only log partitioned by key, consumers pull at their own offset, replay from any offset, retained for days/weeks. The Saga Pattern coordinates distributed transactions across microservices without 2-Phase Commit, using compensating transactions for rollbacks.',
+    why: 'Synchronous HTTP calls create tight coupling — if the downstream service is slow, the caller blocks. Under traffic spikes, cascading failures propagate upstream. Event-driven architectures buffer load (Kafka consumers process at their own pace), enable replay (re-process historical events with new logic), and decouple services (producers don\'t know who consumes their events). This is the foundation of CQRS, Event Sourcing, and distributed Saga patterns.',
+    how: '## Message Queue (RabbitMQ / AWS SQS)\nExchange routes messages to queues (Direct, Fanout, Topic, Headers bindings). Multiple competing consumers share one queue — each message processed by exactly one consumer. Delivery: at-least-once (with local deduplication for exactly-once). Data deleted on ACK — cannot replay history.\n\n## Distributed Commit Log (Apache Kafka)\nTopics are split into Partitions (append-only log). Producers emit records; partitioning key determines partition via hash(key) % partitions → ordering guaranteed within a partition. Consumer Groups: each partition assigned to exactly one consumer within a group (parallelism = number of partitions). Data persisted to disk for configurable retention (days/weeks). Consumers track their own offset — can replay from any point.\n\n## Saga Pattern\nFor cross-service transactions where 2PC is not viable, Saga coordinates a sequence of local transactions. Choreography: each service emits domain events consumed by the next service (Kafka-based). Orchestration: a central Saga Orchestrator sends commands and awaits responses. On failure: compensating transactions roll back earlier steps.',
+    internals: '## Kafka Internals\nLog segments: each partition is a sequence of ordered, immutable log segments on disk. Log compaction: retains only the last value per key for changelog-style topics. ISR (In-Sync Replicas): leader only acknowledges writes once all ISR replicas have confirmed. Producer ACK levels: acks=0 (fire and forget), acks=1 (leader written), acks=all (all ISR confirmed, strongest durability).\n\n## Comparison: Queue vs Kafka\n| Attribute | RabbitMQ/SQS | Kafka |\n|-----------|------------|-------|\n| Replay | ❌ Deleted on ACK | ✅ Replay from any offset |\n| Ordering | Per-queue FIFO | Per-partition ordering |\n| Concurrency | Competing consumers | 1 consumer per partition per group |\n| Use case | Task queues, RPC | Event streaming, CQRS, audit logs |',
+    realWorld: 'LinkedIn invented Kafka to process 1 trillion messages per day. Uber uses Kafka for real-time ride events, surge pricing, and analytics. Airbnb uses the Saga pattern with Kafka for payment orchestration across multiple microservices. AWS SQS processes trillions of messages per day for serverless workflows.',
+    advantages: [
+      'Kafka consumer offset model allows replay — reprocess historical events with updated business logic',
+      'Decoupling via events eliminates synchronous blocking — producers don\'t wait for consumer processing',
+      'Kafka log compaction enables changelog materialization for rebuilding read models',
+      'Saga pattern enables distributed transactions without 2PC — no distributed lock coordination'
+    ],
+    disadvantages: [
+      'Kafka operational complexity: ZooKeeper/KRaft, ISR management, consumer lag monitoring',
+      'At-least-once delivery means consumers must implement idempotency for safe reprocessing',
+      'Saga compensating transactions are complex to implement correctly for partial failures',
+      'Message Queue order: SQS FIFO queues limit to 3,000 messages per second; standard queues have no ordering'
+    ],
+    tradeoffs: 'Kafka: durable, replayable, high-throughput, operationally complex. RabbitMQ/SQS: simpler, push-based, auto-delete. Saga choreography: loosely coupled, harder to visualize flow. Saga orchestration: centralized control, single point of failure risk.',
+    alternatives: ['Apache Kafka (Distributed log, high throughput event streaming)', 'RabbitMQ (AMQP broker, flexible exchange routing)', 'AWS SQS / SNS (Serverless managed queues and pub/sub)', 'Redis Streams (Lightweight log-based stream processing)'],
+    whenToUse: 'Kafka: Event sourcing, CQRS, audit trails, real-time analytics, microservice event backbone. RabbitMQ/SQS: Task queues (email sending, image resizing), RPC-style async work, simple fan-out. Saga: Distributed business transactions spanning multiple microservices/databases.',
+    whenNotToUse: 'Do not use Kafka for simple task queues where SQS/RabbitMQ is sufficient — Kafka\'s operational overhead is significant. Avoid Saga for simple single-database transactions — use database ACID transactions instead.',
+    commonMistakes: [
+      'Not making Kafka consumers idempotent, causing duplicate processing on consumer restart/rebalance',
+      'Adding more consumers than partitions in a Kafka consumer group — extra consumers sit idle',
+      'Forgetting to implement compensating transactions in Saga, leaving the system in a partially committed state',
+      'Using Kafka retention of infinite/very long duration without monitoring disk usage growth'
+    ],
+    interviewQuestions: [
+      { q: 'How does Kafka achieve message ordering? When can ordering be violated?', a: 'Kafka guarantees ordering within a single partition. A topic is divided into N partitions; each partition is an append-only ordered log. When a producer sends a message, it\'s routed to a partition via hash(partitionKey) % numPartitions. All messages with the same key go to the same partition → ordered delivery for that key. Ordering can be violated if: (1) no partition key is set (round-robin distribution loses ordering), (2) the number of partitions is increased (keys reroute to different partitions for new messages), (3) producer retries with acks=1 and multiple in-flight requests (enable.idempotence=true prevents this).' },
+      { q: 'What is the Saga pattern? Compare choreography vs orchestration.', a: 'The Saga pattern decomposes a distributed transaction into a sequence of local database transactions, each emitting an event that triggers the next service. On failure, compensating transactions undo previous steps. Choreography: each service listens for events and reacts — no central coordinator. Pros: loose coupling, simple to add new services. Cons: hard to track overall flow, event storms can cascade. Orchestration: a central Saga Orchestrator (stateful service or state machine) sends commands and awaits events. Pros: centralized visibility, clear failure handling. Cons: orchestrator is a single point of failure, higher coupling.' },
+      { q: 'Why does Kafka use pull-based consumption instead of push?', a: 'Pull-based consumption lets consumers control their own pace. A slow consumer won\'t be overwhelmed by a fast producer — it simply reads at its own rate. Consumers can also implement back-pressure naturally (stop pulling when processing queue is full). Push-based systems must implement sophisticated rate control to avoid overwhelming slow consumers. Pull also enables replay — consumers simply reset their offset to re-read historical data. The trade-off: pull introduces polling latency, mitigated by Kafka\'s long-polling mechanism (consumers wait up to fetch.max.wait.ms for new records before returning empty).' }
+    ],
+    resources: [
+      { title: 'Kafka: The Definitive Guide', url: 'https://www.confluent.io/resources/kafka-the-definitive-guide/', type: 'book' },
+      { title: 'Saga Pattern — microservices.io', url: 'https://microservices.io/patterns/data/saga.html', type: 'article' }
+    ],
+    relatedTopics: ['kafka', 'backend-distributed-systems', 'backend-api-design'],
+  },
+
+  // ===== BACKEND: SECURITY & AUTH =====
+  'backend-security': {
+    id: 'backend-security',
+    title: 'Authentication, Authorization & Backend Security (OWASP)',
+    subject: 'Backend Engineering',
+    category: 'Backend',
+    difficulty: 'Advanced',
+    estimatedTime: '60 min',
+    tags: ['JWT', 'OAuth2', 'OIDC', 'OWASP', 'security', 'authentication', 'authorization', 'RBAC', 'CSRF', 'SQL-injection'],
+    what: 'Backend identity systems verify client identity (authentication) and enforce resource permissions (authorization). Stateful sessions use an opaque session ID stored in Redis/DB via an HttpOnly cookie. Stateless JWT contains a self-contained cryptographically signed payload (sub, exp, roles) verifiable by any microservice using the public key — but revocation requires a distributed blacklist. OAuth 2.0 enables delegated access via scopes. OIDC (OpenID Connect) adds an id_token for user profile claims. The OWASP Top 10 defines the most critical web application security risks.',
+    why: 'Security failures are catastrophic: credential theft, data breaches, financial fraud. Understanding JWT vs stateful sessions prevents insecure token handling. OAuth 2.0 without PKCE enables authorization code interception attacks on mobile apps. SQL injection without parameterized queries exposes entire databases. SSRF attacks allow attackers to query AWS metadata endpoints (169.254.169.254) to steal cloud credentials.',
+    how: '## Stateful Sessions vs JWT\nStateful: Server issues opaque session ID stored in Redis; client sends it as HttpOnly cookie. Instant revocation (delete from Redis). Requires central DB lookup per request.\nJWT: Self-contained signed token (header.payload.signature). Any service verifies with public key — no DB lookup. Downside: to revoke a JWT before expiry, maintain a distributed blacklist (Redis SET of invalidated JTIs).\n\n## OAuth 2.0 + PKCE\nPKCE (Proof Key for Code Exchange): Mandated for SPAs and mobile apps. Client generates a random code_verifier, hashes it to code_challenge, sends with authorization request. Authorization server returns code only to the app that knows the original code_verifier. Prevents authorization code interception.\n\n## OWASP Top 10 Defenses\n- SQL Injection: Parameterized prepared statements; ORM; least-privilege DB users\n- BOLA/IDOR: WHERE id = :id AND tenant_id = :user_tenant on every query; use UUIDv4 not sequential IDs\n- SSRF: Deny internal IP ranges (10.0.0.0/8, 127.0.0.1) in HTTP client; route through isolated outbound proxy\n- XSS: Content-Security-Policy header; HttpOnly cookies for auth tokens; HTML-encode all output\n- CSRF: SameSite=Strict cookies; cryptographic Anti-CSRF double-submit tokens on mutating requests',
+    internals: '## Password Hashing\nNever use MD5 or SHA-256 for passwords (fast hashing = GPU brute-force attack). Use adaptive memory-hard algorithms:\n- Argon2id: Winner of the Password Hashing Competition. Configurable memory, iterations, and parallelism — resists GPU and ASIC attacks.\n- Bcrypt: Battle-tested Blowfish-based; configure work factor ≥ 12.\n\n## Rate Limiting Algorithms\n- Token Bucket: Tokens refill at a steady rate. Allows bursts up to bucket capacity. Ideal for web APIs.\n- Sliding Window Log: Tracks exact request timestamps in Redis Sorted Sets. Highly accurate, but memory-intensive.\n- Sliding Window Counter: Blends prior window counts with current window. Low memory footprint, high accuracy.',
+    realWorld: 'Auth0 and AWS Cognito implement OAuth 2.0 + OIDC for millions of apps. GitHub uses PKCE for its OAuth apps. Uber uses JWT for short-lived API tokens with Redis-based revocation lists. The 2021 Log4Shell vulnerability enabled SSRF-style remote code execution. The 2017 Equifax breach was caused by a SQL injection in an unpatched library.',
+    advantages: [
+      'JWT enables stateless authentication — any microservice verifies tokens without a central DB call',
+      'OAuth 2.0 + PKCE provides secure delegated authorization without exposing user credentials to third parties',
+      'Argon2id makes offline brute-force attacks computationally infeasible with its memory-hard algorithm',
+      'RBAC middleware centralizes permission logic, preventing scattered authorization checks'
+    ],
+    disadvantages: [
+      'JWT revocation requires a distributed blacklist (Redis), negating some stateless benefits',
+      'OAuth 2.0 flow complexity: authorization code, tokens, refresh tokens, PKCE — easy to implement incorrectly',
+      'SameSite=Strict cookies break OAuth flows requiring cross-site redirects',
+      'CSRF protection with double-submit tokens requires careful implementation to avoid bypasses'
+    ],
+    tradeoffs: 'Stateful sessions: instant revocation, requires central DB. JWT: stateless/distributed, complex revocation. Argon2id: secure but ~100ms hash time (intentional — prevents brute force but limits login throughput).',
+    alternatives: ['OAuth2 + OIDC with JWTs', 'Stateful session cookies with Redis session store', 'PASETO (Platform-Agnostic Security Tokens)', 'Mutual TLS (mTLS) for microservice zero-trust'],
+    whenToUse: 'JWT: Distributed microservices where stateless auth is essential. Stateful sessions: Monolith or small services where instant revocation is required. OAuth 2.0: Third-party app integrations, delegated access. OIDC: Single Sign-On (SSO) across multiple applications.',
+    whenNotToUse: 'Do not store JWT in localStorage (XSS vulnerable) — use HttpOnly cookies. Do not implement OAuth without PKCE for SPA/mobile. Never hash passwords with SHA-256 or MD5.',
+    commonMistakes: [
+      'Storing JWTs in localStorage instead of HttpOnly cookies, exposing them to XSS attacks',
+      'Not verifying the JWT algorithm field (alg: none attack or RS256 vs HS256 confusion)',
+      'Using sequential integer IDs (1, 2, 3) for resources — enables IDOR/BOLA enumeration attacks',
+      'Allowing CORS wildcard (Access-Control-Allow-Origin: *) on authenticated API endpoints'
+    ],
+    interviewQuestions: [
+      { q: 'What is the difference between authentication and authorization? Give examples.', a: 'Authentication: Who are you? Verifying identity. Examples: password login, biometric, JWT/session validation. Authorization: What are you allowed to do? Enforcing permissions. Examples: RBAC (role: admin can delete users, viewer cannot), ABAC (attribute-based: can only access resources in your department), BOLA check (can only read your own invoices). Authentication must happen before authorization. A common mistake is confusing the two — a server that checks a valid JWT (authentication) but doesn\'t check if that user owns the requested resource (authorization) is vulnerable to BOLA/IDOR attacks.' },
+      { q: 'Explain how SQL injection works and how parameterized queries prevent it.', a: 'SQL injection: An attacker injects SQL syntax into an input field. Example: username input: admin\' OR 1=1 --. If concatenated directly: SELECT * FROM users WHERE username = \'admin\' OR 1=1 --\'. This returns all users. Worse: \'admin\'; DROP TABLE users; -- deletes the table. Parameterized prepared statements: the query structure is compiled first (SELECT * FROM users WHERE username = ?), and the input is passed as a separate parameter. The database driver ensures the parameter is treated purely as a value, never as SQL syntax. ORMs automatically use parameterized queries, but raw string concatenation in SQL is always dangerous.' },
+      { q: 'What is SSRF and how would you prevent it in a backend service?', a: 'SSRF (Server-Side Request Forgery): An attacker tricks the server into making an HTTP request to an internal URL. Example: an API endpoint that fetches a user-provided URL. Attacker provides http://169.254.169.254/latest/meta-data/iam/security-credentials/ (AWS EC2 metadata endpoint) to steal cloud IAM credentials. Prevention: (1) Validate and allowlist permitted URL schemes and domains. (2) Block requests to private IP ranges: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8, 169.254.0.0/16. (3) Route all outbound HTTP requests through a dedicated forward proxy that enforces the allowlist. (4) Use IMDSv2 on AWS (requires a session token for metadata access).' }
+    ],
+    resources: [
+      { title: 'OWASP Top 10', url: 'https://owasp.org/www-project-top-ten/', type: 'docs' },
+      { title: 'OAuth 2.0 Security Best Practices — RFC 9700', url: 'https://datatracker.ietf.org/doc/html/rfc9700', type: 'docs' },
+      { title: 'JWT Security Best Practices', url: 'https://curity.io/resources/learn/jwt-best-practices/', type: 'article' }
+    ],
+    relatedTopics: ['backend-api-design', 'backend-networking', 'spring-security-jwt'],
+  },
+
+  // ===== BACKEND: CACHING =====
+  'backend-caching': {
+    id: 'backend-caching',
+    title: 'Advanced Caching Strategies & Invalidation Patterns',
+    subject: 'Backend Engineering',
+    category: 'Backend',
+    difficulty: 'Advanced',
+    estimatedTime: '55 min',
+    tags: ['caching', 'Redis', 'CDN', 'cache-aside', 'write-through', 'LRU', 'cache-stampede', 'cache-penetration', 'TTL'],
+    what: 'Caching bridges the latency gap between fast in-memory execution (Redis: ~0.1ms) and slower persistent disk access (PostgreSQL: 1-50ms). Caching topologies: Cache-Aside (app checks cache, on miss loads from DB), Read-Through (cache handles DB reads transparently), Write-Through (synchronous cache + DB write), Write-Behind (async batch DB updates). Eviction policies: LRU (Least Recently Used), LFU (Least Frequently Used). Critical failure modes: Cache Avalanche (mass expiry), Cache Stampede/Thundering Herd (hot key expiry), Cache Penetration (non-existent keys hitting DB).',
+    why: 'A single Redis cache layer can absorb 95%+ of read traffic, reducing database load by orders of magnitude. Without proper caching, databases become bottlenecks under read-heavy loads. Without proper invalidation and failure mode protection, caching systems can cascade and overwhelm the database (the exact failure mode they are designed to prevent).',
+    how: '## Cache-Aside (Lazy Loading)\nApplication checks cache → hit: return cached value. Miss: load from DB, populate cache, return value. Cache failures do not cascade to DB failures. Most common pattern for read-heavy workloads.\n\n## Read-Through\nApp treats cache as the primary store. Cache library handles DB reads transparently. Simplifies app code but cache provider must support it.\n\n## Write-Through\nWrites update cache AND primary DB synchronously. Guarantees strong read consistency immediately after write. Doubles write latency.\n\n## Write-Behind (Write-Back)\nWrites update cache instantly; background workers batch-flush to DB. Highest write throughput. Risk: data loss if cache crashes before flushing.\n\n## Failure Mode Protections\n- **Cache Avalanche:** Many keys expire simultaneously → DB overwhelmed. Fix: add random jitter to TTLs (TTL = base + random(0, jitter)).\n- **Cache Stampede (Thundering Herd):** Hot key expires → hundreds of concurrent DB queries. Fix: Probabilistic Early Recomputation or distributed mutex locking (Redlock).\n- **Cache Penetration:** Requests for non-existent keys bypass cache and hit DB repeatedly. Fix: Bloom filter (probabilistic membership check) or cache null values with short TTL.',
+    internals: '## LRU vs LFU Eviction\nLRU (Least Recently Used): Discards items not accessed for the longest time. Implemented via a doubly-linked list + HashMap (O(1) access + O(1) eviction). Weakness: a one-time scan of cold data evicts hot items (cache pollution).\nLFU (Least Frequently Used): Tracks access frequency; discards items with lowest count. Better for stable popularity distributions; more complex to implement.\n\n## Redlock Algorithm\nFor distributed Cache Stampede protection: client tries to acquire a lock in Redis using SET key value NX PX 30000 (atomic SET if not exists with 30s TTL). Only one client acquires the lock and recomputes the cache value; others wait or serve the stale value. Uses majority quorum across 5 Redis instances for fault tolerance.\n\n## Cache Warming Strategies\nPre-populating cache before traffic hits: (1) Scheduled batch jobs load popular data. (2) Shadow traffic replays production requests against a new cache. (3) Gradual traffic shifting allows the cache to warm under real load.',
+    realWorld: 'Twitter caches each user\'s home timeline in Redis (300M users\' timelines pre-computed). Instagram caches user media metadata in Memcached. Netflix uses EVCache (built on Memcached) with 700+ nodes globally. Cloudflare\'s CDN caches petabytes of content at 300+ PoPs worldwide. Facebook TAO is a distributed cache serving social graph reads at trillion-request-per-day scale.',
+    advantages: [
+      'Redis cache layer reduces database load by 90-99% for read-heavy workloads',
+      'Write-behind pattern absorbs write bursts without overloading the primary database',
+      'Bloom filters eliminate cache penetration attacks with just 10 bits per element (~1% false positive rate)',
+      'CDN edge caching serves content in <10ms globally without hitting origin servers'
+    ],
+    disadvantages: [
+      'Cache invalidation is one of the hardest problems in computer science — stale data causes incorrect behavior',
+      'Write-behind caching risks data loss on cache server crash before flush',
+      'Distributed Redlock has race conditions in certain network partition scenarios',
+      'Cache warming after a cold start causes a DB thundering herd until the cache heats up'
+    ],
+    tradeoffs: 'Strong consistency (Write-Through, double write latency) vs. eventual consistency (Write-Behind, data loss risk). LRU (recency-optimized) vs. LFU (frequency-optimized). Low TTL (fresh data, high DB load) vs. high TTL (stale data, low DB load).',
+    alternatives: ['Cache-Aside (Lazy loading)', 'Write-Through / Write-Back caching', 'Refresh-Ahead (Proactive cache warming)', 'Two-tier caching (In-memory Caffeine + Distributed Redis)'],
+    whenToUse: 'Cache-Aside: General read-heavy workloads, user profile data, product catalog. Write-Through: Financial account balances where consistency is critical. Write-Behind: High-write click counters, analytics event aggregation. Bloom Filters: Cache penetration protection for any endpoint receiving random key queries.',
+    whenNotToUse: 'Do not cache frequently updated data with high consistency requirements (live stock prices, seat inventory). Avoid caching large binary blobs in Redis that exhaust memory budget. Don\'t use Write-Behind for any data where loss is unacceptable.',
+    commonMistakes: [
+      'Not adding TTL jitter, causing cache avalanche when batch-loaded keys all expire simultaneously',
+      'Caching mutable user-specific data globally instead of per-user, causing data leakage between users',
+      'Not monitoring cache hit rate — a low hit rate (< 80%) indicates the cache is not effective',
+      'Setting TTL too long for user session data, causing stale authorization state after role changes'
+    ],
+    interviewQuestions: [
+      { q: 'What is a Cache Stampede (Thundering Herd) and how do you prevent it?', a: 'A Cache Stampede occurs when a highly popular (hot) cache key expires. All concurrent requests simultaneously get a cache miss, query the database, and attempt to write the result back. For a key receiving 10,000 req/s, this means 10,000 simultaneous DB queries in the milliseconds after expiry. Prevention strategies: (1) Probabilistic Early Recomputation: before the TTL expires, a small probability of triggering a background cache refresh increases, so the cache is refreshed before it actually expires. (2) Distributed Mutex (Redlock): only one process acquires the lock to recompute; others either wait or serve the stale value temporarily. (3) Stale-While-Revalidate: serve the stale cached value immediately while triggering an async background refresh.' },
+      { q: 'Compare Cache-Aside and Write-Through patterns. When would you use each?', a: 'Cache-Aside (Lazy Loading): On read, check cache → miss → load from DB → populate cache → return. Pros: only requested data is cached (memory efficient), cache failures don\'t break reads. Cons: first request after cache miss always hits DB (cold start latency), potential for stale data between write and next cache miss. Use for: read-heavy workloads, general-purpose caching. Write-Through: On write, update both cache and DB synchronously. Pros: cache is always consistent with DB, reads always hit cache after first write. Cons: every write is slower (cache + DB latency), unused cached data occupies memory. Use for: write-then-read patterns where consistency is critical (user profile updates).' },
+      { q: 'What is Cache Penetration? How does a Bloom filter prevent it?', a: 'Cache Penetration: an attacker or buggy client continuously requests keys that don\'t exist in cache or DB (e.g., random UUIDs). Each request gets a cache miss, queries the DB (also a miss), and returns empty. Sustained at high RPS, this bypasses the cache entirely and overwhelms the DB. A Bloom filter is a probabilistic data structure that answers: "Is this element in the set?" with zero false negatives (if it says no, the element definitely doesn\'t exist) but small false positive rate (~1%). Store all valid resource IDs in a Bloom filter. Before hitting cache/DB, check the Bloom filter. If it says "not in set", return 404 immediately — no DB query needed.' }
+    ],
+    resources: [
+      { title: 'Redis Caching Patterns', url: 'https://redis.io/docs/manual/patterns/', type: 'docs' },
+      { title: 'Caching Best Practices — AWS', url: 'https://aws.amazon.com/caching/best-practices/', type: 'article' }
+    ],
+    relatedTopics: ['redis-concurrency', 'backend-distributed-systems', 'backend-databases-rdbms'],
+  },
+
+  // ===== BACKEND: DISTRIBUTED SYSTEMS =====
+  'backend-distributed-systems': {
+    id: 'backend-distributed-systems',
+    title: 'Distributed Systems Theory: CAP, PACELC & Scalability',
+    subject: 'Backend Engineering',
+    category: 'Backend',
+    difficulty: 'Expert',
+    estimatedTime: '75 min',
+    tags: ['CAP-theorem', 'PACELC', 'sharding', 'consistent-hashing', 'replication', 'circuit-breaker', 'bulkhead', 'microservices'],
+    what: 'Distributed systems theory explains the fundamental trade-offs that govern every distributed database and microservice architecture. CAP Theorem: under a Network Partition, a system must choose between Consistency (C) or Availability (A). PACELC extends this: Else (during normal operation), choose between Latency (L) or Consistency (C). Horizontal Sharding distributes a database across physical machines by a Shard Key. Consistent Hashing minimizes remapping when nodes are added/removed. Synchronous replication guarantees zero data loss at the cost of write latency; asynchronous replication provides lower latency at the risk of replication lag.',
+    why: 'Engineers who don\'t understand CAP/PACELC make wrong database choices (using Cassandra when strong consistency is required, or PostgreSQL when linear horizontal scale is needed). Misunderstanding sharding leads to hotspot partitions that eliminate all scaling benefit. Without circuit breakers and bulkheads, a slow downstream microservice cascades failures across the entire system.',
+    how: '## CAP Theorem\nCP Systems (HBase, ZooKeeper, etcd): Reject stale reads during network partitions — sacrifice availability to maintain consistency. Used for leader election, distributed locks, configuration.\nAP Systems (Cassandra, DynamoDB): Serve potentially stale reads to stay available during partitions. Used for user sessions, shopping carts, social feeds where eventual consistency is acceptable.\n\n## PACELC Theorem\nExtends CAP to normal (non-partition) operation: MongoDB (PC/EC): prioritizes consistency over latency during normal operations. DynamoDB (PA/EL): prioritizes availability and latency.\n\n## Horizontal Sharding\nRange-based sharding: shard by value range (A-M → Shard 1, N-Z → Shard 2). Problem: leads to write hotspots if data is skewed. Hash-based sharding: hash(key) % N distributes writes evenly. Consistent Hashing: nodes and keys are mapped to a 360° virtual ring. Adding/removing a node only migrates K/N keys (K = keys on that node). Virtual nodes (vnodes) ensure uniform distribution.\n\n## Replication\nSynchronous: Leader waits for all ISR replicas to confirm disk write. Zero data loss, higher write latency.\nAsynchronous: Leader commits immediately; replicas sync asynchronously. Lower latency, risks replication lag and data loss on failover.',
+    internals: '## Microservices Resilience Patterns\n**Circuit Breaker:** Monitors downstream failure rate. Closed (normal) → Open (failing fast, no requests forwarded) → Half-Open (probing recovery). Prevents thread pool exhaustion by failing fast.\n\n**Bulkhead Pattern:** Isolates resource pools (thread pools, semaphores, connection pools) per downstream dependency. A slow payment service can only exhaust its own thread pool — user service threads remain unaffected.\n\n**API Gateway / BFF:** Centralizes SSL termination, rate limiting, JWT validation, and request transformation. BFF (Backend for Frontend) provides optimized APIs for each client type (mobile, web, IoT).\n\n## Zero-Downtime Database Migrations\nExpand and Contract Pattern:\n1. Add new nullable column\n2. Deploy app writing to both old and new columns\n3. Backfill historical data\n4. Update reads to new column\n5. Deprecate and drop old column (after confirming rollout)\nNever: ALTER TABLE on a live database in a single step on a large table (table lock).',
+    realWorld: 'Netflix uses circuit breakers (Hystrix/Resilience4j) between all microservices. DynamoDB (AP/EL) powers Amazon\'s shopping cart — availability over consistency. etcd (CP) is used by Kubernetes for cluster state storage. Cassandra (AP/EL) powers Discord\'s message storage with 4B messages/day. Consistent hashing is used by Memcached, Cassandra, and AWS DynamoDB for key distribution.',
+    advantages: [
+      'Consistent hashing minimizes data migration when adding/removing cache or database nodes',
+      'Circuit breakers prevent cascading failures by failing fast rather than exhausting thread pools',
+      'Bulkheads provide fault isolation — one slow service cannot take down unrelated services',
+      'AP systems (Cassandra) provide 99.999% availability even during data center partitions'
+    ],
+    disadvantages: [
+      'CAP is a fundamental constraint — you cannot have Consistency AND Availability during a partition',
+      'Hash-based sharding requires rebalancing when changing the number of shards (consistent hashing mitigates this)',
+      'Asynchronous replication risks losing committed writes on leader failure before replication completes',
+      'Expand-and-Contract migrations are slow (sometimes months for large tables) and require careful coordination'
+    ],
+    tradeoffs: 'Consistency vs Availability (CAP). Latency vs Consistency (PACELC). Synchronous replication (zero data loss, higher latency) vs Asynchronous (lower latency, possible data loss). Circuit breaker fail-fast (better UX under failures) vs timeout/retry (potentially recovering from transient errors).',
+    alternatives: ['Strict Consistency with Raft / Paxos (etcd, Consul)', 'Eventual Consistency with CRDTs / Vector Clocks (Dynamo, Cassandra)', 'Two-Phase Commit (2PC / XA transactions)', 'Saga Pattern (Choreographed or Orchestrated)'],
+    whenToUse: 'CP systems (etcd, ZooKeeper): Distributed locks, leader election, configuration management. AP systems (Cassandra, DynamoDB): Session stores, shopping carts, social feeds, IoT time-series. Circuit breakers: Any synchronous microservice-to-microservice call. Consistent hashing: Distributed caches (Memcached, Redis Cluster), database sharding.',
+    whenNotToUse: 'Do not use AP systems for financial ledgers requiring strict consistency. Avoid sharding prematurely — PostgreSQL with read replicas and connection pooling handles significant scale before sharding is needed.',
+    commonMistakes: [
+      'Choosing the wrong CAP properties for a use case — using an AP database for financial transactions',
+      'Range-based sharding without analyzing data distribution, causing hotspot partitions',
+      'Not setting circuit breaker timeouts correctly — too low causes false positives; too high wastes thread pool capacity',
+      'Running breaking schema migrations (DROP COLUMN, ALTER TYPE) on live production databases without the expand-contract pattern'
+    ],
+    interviewQuestions: [
+      { q: 'Explain CAP Theorem. Give an example of a CP and an AP system and when you would choose each.', a: 'CAP Theorem (Brewer, 2000): A distributed system cannot simultaneously guarantee all three: Consistency (every read returns the most recent write), Availability (every request receives a response), and Partition Tolerance (system continues operating despite network partitions). Since network partitions are unavoidable in distributed systems, the real choice is CP vs AP. CP System example: etcd/ZooKeeper. Under partition, etcd stops serving reads from minority partitions to avoid stale data. Choose for: distributed locks, leader election, Kubernetes cluster state. AP System example: Cassandra/DynamoDB. Under partition, all nodes continue serving reads (possibly stale). Choose for: shopping carts, user sessions, social feeds where eventual consistency is acceptable.' },
+      { q: 'How does consistent hashing work? What problem does it solve compared to hash(key) % N?', a: 'hash(key) % N: When N changes (node added or removed), almost all keys remap to new nodes — requires migrating N-1/N of all data. Consistent hashing: maps both nodes and keys to positions on a 360° virtual ring using the same hash function. Each key is assigned to the first node clockwise from its position. When a node is removed, only its keys (K/N total keys) migrate to the next clockwise node. Adding a node only moves keys from the next clockwise neighbor. Virtual nodes (vnodes): each physical node gets multiple positions on the ring (e.g., 150 vnodes) for uniform load distribution. Used by: Cassandra, Memcached, Redis Cluster, AWS DynamoDB.' },
+      { q: 'What is the Circuit Breaker pattern? Describe its state machine.', a: 'Circuit Breaker monitors downstream service calls and prevents cascading failures. States: Closed (normal): requests pass through; failure rate tracked. If failure rate exceeds threshold (e.g., >50% in last 10 requests), transition to Open. Open (failing fast): requests immediately fail without calling downstream. Saves thread pool capacity. After a timeout (e.g., 30s), transition to Half-Open. Half-Open (probing): allow a limited number of test requests. If they succeed: transition back to Closed. If they fail: return to Open. Implementations: Netflix Hystrix (deprecated), Resilience4j (Java), Polly (.NET), Python circuitbreaker library.' }
+    ],
+    resources: [
+      { title: 'Designing Data-Intensive Applications — Kleppmann', url: 'https://dataintensive.net', type: 'book', author: 'Martin Kleppmann' },
+      { title: 'CAP Twelve Years Later — Eric Brewer', url: 'https://www.infoq.com/articles/cap-twelve-years-later-how-the-rules-have-changed/', type: 'article' },
+      { title: 'Resilience4j Documentation', url: 'https://resilience4j.readme.io', type: 'docs' }
+    ],
+    relatedTopics: ['backend-nosql', 'backend-messaging', 'backend-caching'],
+  },
+
+  // ===== BACKEND: DEVOPS & CONTAINERS =====
+  'backend-devops-containers': {
+    id: 'backend-devops-containers',
+    title: 'DevOps, Docker & Kubernetes (K8s) Architecture',
+    subject: 'Backend Engineering',
+    category: 'Backend',
+    difficulty: 'Advanced',
+    estimatedTime: '65 min',
+    tags: ['Docker', 'Kubernetes', 'containers', 'DevOps', 'K8s', 'CI/CD', 'deployment', 'orchestration'],
+    what: 'Modern backend engineers own the lifecycle of their code beyond the local IDE. Docker containers are isolated Linux processes sharing the host OS kernel, enforced via Linux namespaces (pid, net, mnt, user) and cgroups (CPU shares, RAM limits, disk I/O). Kubernetes (K8s) orchestrates container deployment, self-healing, and elasticity. The Control Plane consists of: kube-apiserver, etcd (distributed state store), kube-scheduler, and controller-manager. Worker Nodes run: kubelet (node agent), kube-proxy (network routing), and the container runtime (containerd).',
+    why: 'Without containerization, "works on my machine" bugs are inevitable due to OS, library, and environment differences. Without Kubernetes orchestration, scaling requires manual server management, self-healing requires manual intervention, and rolling deployments cause downtime. Modern cloud-native engineering demands fluency in Docker and K8s.',
+    how: '## Docker Internals\nLinux Namespaces: Process isolation (pid), networking (net), filesystem mounts (mnt), user IDs (user). Effectively creates an isolated environment without a full hypervisor.\ncgroups (Control Groups): Enforce hardware boundaries — maximum CPU shares, RAM allocations, disk I/O bandwidth per container.\nMulti-Stage Builds: Compile binaries in a build image (includes compilers, dev dependencies). Copy only the minimal runtime artifacts into a lightweight scratch/alpine base image. Dramatically reduces image attack surface and size.\n\n## Kubernetes Architecture\nControl Plane: kube-apiserver (REST API entrypoint), etcd (distributed KV store for cluster state), kube-scheduler (assigns pods to nodes based on resource requests), controller-manager (reconciliation loops: ReplicaSet, Deployment, StatefulSet controllers).\nWorker Nodes: kubelet (node agent — applies pod specs, reports health), kube-proxy (iptables/IPVS rules for Service routing), containerd (container runtime).\nPrimitives: Pod (smallest deployable unit), Deployment (desired replica count + rolling update strategy), Service (stable ClusterIP, NodePort, or LoadBalancer), Ingress (HTTP/HTTPS routing rules).',
+    internals: '## Kubernetes Pod Scheduling\nScheduler selects nodes based on: ResourceRequests (CPU/memory requests), NodeSelector/Affinity (label matching), Taints and Tolerations (dedicated node pools), Pod Anti-Affinity (spread across failure domains).\n\n## Rolling Update Strategy\nDeployment spec: maxSurge (extra pods during update), maxUnavailable (pods that can be down). Rolling update replaces pods incrementally — zero downtime if health checks are correct.\n\n## Graceful Shutdown\nSIGTERM Protocol: When K8s scales down a pod: 1) Stop accepting new HTTP requests. 2) Allow ongoing DB transactions to complete. 3) Close DB pool and cache connections. 4) Exit within terminationGracePeriodSeconds before SIGKILL.',
+    realWorld: 'Google runs 2 billion container instances per week on Borg (the internal predecessor to Kubernetes). Spotify, Airbnb, and Lyft run their entire backend on Kubernetes. Docker Hub hosts 8M+ container images. GitHub Actions and GitLab CI use Docker containers for every CI/CD build step.',
+    advantages: [
+      'Docker containers ensure identical environments from dev to prod — eliminates environment-specific bugs',
+      'Kubernetes self-healing: automatically restarts crashed pods and reschedules on failed nodes',
+      'K8s Horizontal Pod Autoscaler scales pods based on CPU/memory metrics automatically',
+      'Multi-stage Docker builds reduce production image size by 80-95% vs single-stage builds'
+    ],
+    disadvantages: [
+      'Kubernetes has a steep learning curve — significant operational overhead for small teams',
+      'Container images are immutable: any config change requires building and deploying a new image',
+      'K8s networking (CNI, Service mesh) adds complexity and potential performance overhead',
+      'etcd is a critical single point of failure for the entire K8s cluster control plane'
+    ],
+    tradeoffs: 'Docker Compose (simple, single-host) vs Kubernetes (complex, multi-node, production-grade). Kubernetes self-manages scaling and healing but adds significant operational complexity. Container isolation is strong but not as strong as VM isolation (shared kernel).',
+    alternatives: ['Kubernetes (K8s container orchestration)', 'Docker Swarm (Lightweight cluster orchestration)', 'AWS ECS / Fargate (Managed serverless containers)', 'Serverless Functions (AWS Lambda, Cloudflare Workers)'],
+    whenToUse: 'Docker: All production deployments — every service should be containerized for reproducibility. Kubernetes: When you have multiple services, need horizontal scaling, self-healing, and rolling deployments. Start with managed K8s (EKS, GKE, AKS) to reduce operational burden.',
+    whenNotToUse: 'Kubernetes is overkill for a single-service application with low traffic — use Docker Compose or a managed PaaS. Avoid Docker for latency-critical system-level services that need direct hardware access.',
+    commonMistakes: [
+      'Running containers as root (use USER directive in Dockerfile to drop privileges)',
+      'Not setting resource requests and limits on K8s pods — causes CPU throttling or OOM kills',
+      'Storing state in containers (e.g., writing files to the container filesystem) — use PersistentVolumes',
+      'Not implementing SIGTERM handler for graceful shutdown, causing abrupt connection drops during pod restarts'
+    ],
+    interviewQuestions: [
+      { q: 'How does Docker container isolation work? What are Linux namespaces and cgroups?', a: 'Docker containers are Linux processes, not VMs. Isolation comes from two kernel features: Namespaces provide scoped views of system resources: PID namespace (container processes can\'t see host processes), Network namespace (isolated networking stack — separate IP address, routes, interfaces), Mount namespace (isolated filesystem tree from a container image), User namespace (map container root to an unprivileged host user). cgroups (Control Groups) enforce resource limits: max CPU shares (prevents one container monopolizing CPU), max RAM allocation (container gets SIGKILL on OOM), disk I/O rate limits. Containers share the host OS kernel — they are 10-100× lighter than VMs but provide weaker security isolation.' },
+      { q: 'What are the components of a Kubernetes Control Plane? What happens if etcd goes down?', a: 'Control Plane: kube-apiserver: REST API server, the gateway for all cluster communication (kubectl, kubelet, controllers all call this). etcd: Distributed consistent KV store holding ALL cluster state (pods, deployments, configmaps, secrets). kube-scheduler: Watches for unscheduled pods and assigns them to nodes based on resource availability, affinity, taints. controller-manager: Runs reconciliation loops (ReplicaSet controller ensures desired replica count; Deployment controller manages rolling updates). If etcd goes down: the apiserver loses its backend store — new API calls fail. Existing running pods continue running (kubelet runs independently on nodes) but cannot be modified, rescheduled, or scaled. The cluster becomes read-only in terms of desired state management.' },
+      { q: 'How does a Kubernetes rolling update work? How does it achieve zero downtime?', a: 'A Deployment rolling update works by incrementally replacing old pods with new ones: 1) New ReplicaSet created with updated pod template. 2) Scale up new RS by maxSurge (default: 1) — new pod starts and must pass readinessProbe. 3) Once new pod is Ready (passes health check), scale down old RS by 1 (respecting maxUnavailable). 4) Repeat until old RS has 0 replicas. Zero downtime requires: (a) readinessProbe configured correctly (pod not marked Ready until it can serve traffic), (b) liveness probe to detect unhealthy pods, (c) preStop hook + terminationGracePeriodSeconds to allow in-flight requests to complete before shutdown, (d) sufficient cluster resources to run maxSurge extra pods during transition.' }
+    ],
+    resources: [
+      { title: 'Kubernetes Documentation', url: 'https://kubernetes.io/docs/', type: 'docs' },
+      { title: 'Docker Documentation', url: 'https://docs.docker.com', type: 'docs' },
+      { title: 'Kubernetes in Action — Marko Luksa', url: 'https://www.manning.com/books/kubernetes-in-action', type: 'book', author: 'Marko Luksa' }
+    ],
+    relatedTopics: ['backend-observability', 'backend-distributed-systems'],
+  },
+
+  // ===== BACKEND: OBSERVABILITY =====
+  'backend-observability': {
+    id: 'backend-observability',
+    title: 'Observability: Metrics, Logging, Tracing & Production Reliability',
+    subject: 'Backend Engineering',
+    category: 'Backend',
+    difficulty: 'Advanced',
+    estimatedTime: '50 min',
+    tags: ['observability', 'Prometheus', 'Grafana', 'OpenTelemetry', 'distributed-tracing', 'logging', 'SLO', 'SLA', 'metrics'],
+    what: 'Observability is the ability to understand the internal state of a system from its external outputs. The Three Pillars: Metrics (Prometheus/Grafana): numeric time-series data aggregated over intervals to measure health — Four Golden Signals: Latency, Traffic (RPS), Errors (5xx rate), Saturation (CPU/memory/connection pool). Structured Logging (ELK stack): append-only JSON records of discrete events with trace_id, service, user_id fields. Distributed Tracing (OpenTelemetry): tracks request execution flow across microservice boundaries using spans and W3C traceparent headers.',
+    why: 'Without observability, production incidents are investigated by reading code and guessing. With metrics, you know WHAT is broken (5xx rate spike). With distributed tracing, you know WHERE (which microservice, which downstream call). With structured logging, you know WHY (specific error message and stack trace). All three are required for modern microservice debugging.',
+    how: '## Metrics: Prometheus & Grafana\nPrometheus scrapes metrics from /metrics endpoints (pull model). Metric types: Counter (monotonically increasing: request_total), Gauge (current value: active_connections), Histogram (measures distributions: request_duration_bucket[le]). PromQL queries p95 latency: histogram_quantile(0.95, rate(request_duration_bucket[5m])).\n\n## Structured Logging (ELK Stack)\nJSON format with mandatory fields: {level, timestamp, service, trace_id, user_id, message}. Ingestion pipeline: application writes to stdout → Fluentbit/Vector collects → Elasticsearch/OpenSearch indexes → Kibana queries. trace_id links logs to distributed traces for cross-service correlation.\n\n## Distributed Tracing: OpenTelemetry\nContext Propagation: injects W3C traceparent headers into every outgoing HTTP/gRPC request. Each service creates child spans from the incoming trace context. Spans measure: downstream call latency, database query time, cache hit/miss. Trace visualized as a waterfall diagram across service boundaries. Backends: Jaeger, Tempo, AWS X-Ray.',
+    internals: '## Four Golden Signals (SRE)\n- **Latency:** p50, p95, p99 request duration. p99 of 2s with p50 of 100ms indicates long-tail issues.\n- **Traffic:** Requests per second (RPS). Baseline + alert on sudden drops (upstream failure) or spikes.\n- **Errors:** 5xx error rate. Alert at >0.1% for critical services. Distinguish application errors from downstream failures.\n- **Saturation:** CPU %, memory %, connection pool utilization %. Alert before hitting 100% to allow scale-out time.\n\n## SLI, SLO, SLA\nSLI (Service Level Indicator): The actual measured metric (e.g., 99.5% of requests served < 200ms).\nSLO (Service Level Objective): Internal target (e.g., 99.9% of requests < 200ms).\nSLA (Service Level Agreement): External customer contract (e.g., 99.9% uptime monthly, financial penalty if breached).\nError Budget: 1 - SLO target. A 99.9% SLO allows 43.8 minutes of downtime per month.',
+    realWorld: 'Google SRE pioneered the Four Golden Signals concept. Netflix uses Atlas (metrics), Mantis (stream processing), and Zipkin (tracing). OpenTelemetry is the CNCF standard adopted by AWS, Azure, and GCP. Datadog provides a unified observability platform used by Airbnb, DoorDash, and 25,000+ companies. Cloudflare monitors 1M+ metrics in real time across its global network.',
+    advantages: [
+      'Distributed tracing pinpoints which microservice and which downstream call is causing latency in seconds',
+      'Structured logging with trace_id enables correlating logs across 10+ microservices for a single request',
+      'Prometheus histograms accurately measure p99 latency without sampling bias',
+      'Error budgets make reliability quantifiable and enable data-driven decisions about feature velocity vs. stability'
+    ],
+    disadvantages: [
+      'OpenTelemetry instrumentation adds ~1-3% CPU overhead per service',
+      'High-cardinality metrics (per-user or per-request labels) cause Prometheus cardinality explosion',
+      'Log volume at scale (terabytes/day) requires expensive Elasticsearch infrastructure',
+      'Distributed traces are sampled (typically 1-10%) to control storage costs, potentially missing rare errors'
+    ],
+    tradeoffs: 'Full trace sampling (100%) = complete visibility, high storage cost. Head-based sampling = low cost, misses rare errors. Tail-based sampling = only records slow/error traces, complex to implement. Structured logging with trace_id is cheaper than full tracing but provides less visual context.',
+    alternatives: ['Prometheus + Grafana (Metrics)', 'ELK Stack / OpenSearch (Centralized logs)', 'OpenTelemetry (Unified instrumentation for traces/metrics/logs)', 'Datadog / New Relic (Commercial APM suite)'],
+    whenToUse: 'Always — production microservices without observability are unmaintainable. Implement metrics (Prometheus), structured logging (JSON to stdout), and distributed tracing (OpenTelemetry) from day one. Define SLOs before going to production.',
+    whenNotToUse: 'Do not log sensitive PII (passwords, card numbers, SSNs) even in debug mode. Avoid high-cardinality Prometheus labels (user_id, request_id) — creates millions of time series.',
+    commonMistakes: [
+      'Not adding trace_id to log lines, making cross-service correlation impossible during incidents',
+      'Using high-cardinality labels in Prometheus metrics (e.g., per-user labels), causing memory OOM',
+      'Setting p99 SLO thresholds without measuring actual traffic distribution first',
+      'Not configuring log rotation and retention policies, causing disk space exhaustion'
+    ],
+    interviewQuestions: [
+      { q: 'What are the Four Golden Signals? How do you use them during an incident?', a: 'The Four Golden Signals (Google SRE): Latency: How long are requests taking? Measure p50, p95, p99. A p99 spike with normal p50 indicates long-tail issues (slow queries, GC pauses). Traffic: How many requests per second? Sudden drops may indicate upstream failure or DNS issues. Errors: What % of requests are failing (5xx)? Distinguish between client errors (4xx) and server errors (5xx). Saturation: How full is the system? CPU %, memory %, thread pool %, connection pool %. Alert before hitting 100% to trigger scale-out. Incident response: start with Errors (is there a problem?), then Latency (which requests are slow?), Saturation (is anything maxed out?), Traffic (is the pattern normal?).' },
+      { q: 'How does distributed tracing work with OpenTelemetry? What is a span?', a: 'OpenTelemetry adds distributed tracing by propagating context across service boundaries via HTTP headers (W3C Trace Context: traceparent: 00-{traceId}-{parentSpanId}-{flags}). Each service creates a Span: a named, timed operation (e.g., "HTTP GET /users", "SELECT * FROM users", "Redis GET cache:user:123"). Spans are linked via parent-child relationships, forming a Trace (a tree of spans for a single request). The root span starts at the API gateway. Each downstream call creates a child span. The trace visualizes as a Gantt/waterfall diagram, immediately showing where time is spent (which service, which DB query, which cache operation). Exporters send span data to Jaeger/Tempo/X-Ray for visualization and analysis.' },
+      { q: 'What is the difference between SLI, SLO, and SLA?', a: 'SLI (Service Level Indicator): The actual measured metric. Examples: request success rate, p99 latency, availability percentage. SLO (Service Level Objective): Internal engineering target for an SLI. Example: 99.9% of API requests complete < 500ms. SLOs drive operational decisions — if you\'re burning error budget, feature work stops, reliability work prioritized. SLA (Service Level Agreement): Legal contract with customers defining minimum service guarantees. Usually less strict than SLO (engineers target 99.95% to guarantee 99.9% SLA). Penalty: financial credits or refunds if breached. Error Budget: 1 - SLO = acceptable failure budget. 99.9% SLO = 43.8 min/month downtime budget. Error budgets make reliability decisions data-driven: if budget is exhausted, release freeze.' }
+    ],
+    resources: [
+      { title: 'Site Reliability Engineering — Google SRE Book', url: 'https://sre.google/sre-book/table-of-contents/', type: 'book' },
+      { title: 'OpenTelemetry Documentation', url: 'https://opentelemetry.io/docs/', type: 'docs' },
+      { title: 'Prometheus Documentation', url: 'https://prometheus.io/docs/', type: 'docs' }
+    ],
+    relatedTopics: ['backend-devops-containers', 'backend-distributed-systems'],
+  },
 };
 
 // =====================================================================
@@ -2509,15 +3094,55 @@ export const subjects: Subject[] = [
     icon: '⚙️',
     color: 'from-green-500 to-emerald-600',
     categories: [
-      { 
-        id: 'frameworks', 
-        name: 'Core Architecture & Internals', 
-        topicIds: ['spring-security-jwt', 'postgres-jsonb-mvcc', 'redis-concurrency'] 
+      {
+        id: 'networking',
+        name: 'Networking & Protocols',
+        topicIds: ['backend-networking', 'backend-http-protocols'],
       },
-      { 
-        id: 'messaging', 
-        name: 'Distributed Messaging & Streams', 
-        topicIds: ['kafka'] 
+      {
+        id: 'runtimes',
+        name: 'Runtimes & Concurrency',
+        topicIds: ['backend-concurrency-runtimes'],
+      },
+      {
+        id: 'databases',
+        name: 'Databases & Storage',
+        topicIds: ['backend-databases-rdbms', 'backend-nosql', 'postgres-jsonb-mvcc', 'redis-concurrency'],
+      },
+      {
+        id: 'api',
+        name: 'API Design & Integration',
+        topicIds: ['backend-api-design'],
+      },
+      {
+        id: 'messaging',
+        name: 'Messaging & Event-Driven',
+        topicIds: ['backend-messaging', 'kafka'],
+      },
+      {
+        id: 'security',
+        name: 'Security & Authentication',
+        topicIds: ['backend-security', 'spring-security-jwt'],
+      },
+      {
+        id: 'caching',
+        name: 'Caching Strategies',
+        topicIds: ['backend-caching'],
+      },
+      {
+        id: 'distributed',
+        name: 'Distributed Systems Theory',
+        topicIds: ['backend-distributed-systems'],
+      },
+      {
+        id: 'devops',
+        name: 'DevOps & Containers',
+        topicIds: ['backend-devops-containers'],
+      },
+      {
+        id: 'observability',
+        name: 'Observability & Reliability',
+        topicIds: ['backend-observability'],
       },
     ],
   },
