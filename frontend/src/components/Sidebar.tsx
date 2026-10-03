@@ -105,14 +105,21 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         ))}
       </nav>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-zinc-800/60">
-        <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-xs font-bold">M</div>
-          <div>
-            <div className="text-xs text-zinc-300 font-medium">Manas</div>
-            <div className="text-xs text-zinc-600">Engineer</div>
+      {/* Footer / Student Status */}
+      <div className="p-4 border-t border-zinc-800/80 bg-zinc-950/80 space-y-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white shadow-md">
+              K
+            </div>
+            <div>
+              <div className="text-xs text-zinc-200 font-semibold">Kaustuk</div>
+              <div className="text-[10px] text-zinc-500">Student & Engineer</div>
+            </div>
           </div>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 font-semibold border border-indigo-500/20">
+            Study Mode
+          </span>
         </div>
       </div>
     </div>
